@@ -1,5 +1,4 @@
-CREATE DATABASE quickshow ;
-
+-- Active: 1787082271926@@127.0.0.1@3306@quickshow
 use quickshow; 
 
 CREATE TABLE Admin (
