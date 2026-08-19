@@ -62,5 +62,5 @@ public class Movie {
 /*
     MovieCast is essentially dependent on Movie, but later we're going to have
     several relationships involving Movie, and we should decide cascading behavior based on
-    the actual business operations.
+    the actual business operations, thus we haven't specified cascading and orphan removal yet
 */
