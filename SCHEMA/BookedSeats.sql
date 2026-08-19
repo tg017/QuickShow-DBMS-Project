@@ -1,12 +1,14 @@
-CREATE TABLE `Show`(
-    ShowID INT PRIMARY KEY AUTO_INCREMENT,
-    ShowDate DATE NOT NULL,
-    ShowTime TIME NOT NULL,
-    TicketPrice INT NOT NULL,
-    AvailableSeats INT NOT NULL,
-    ShowStatus ENUM('SCHEDULED', 'ONGOING', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'SCHEDULED',
-    MovieID INT NOT NULL,
-    ScreenID INT NOT NULL,
-    FOREIGN KEY (MovieID) REFERENCES Movie(MovieID),
-    FOREIGN KEY (ScreenID) REFERENCES Screen(ScreenID)
+CREATE TABLE BookedSeats (
+    BookingID INT,
+    ShowID INT,
+    ScreenID INT,
+    SeatID INT,
+
+    PRIMARY KEY (BookingID, ShowID, ScreenID, SeatID),
+
+    FOREIGN KEY (BookingID)
+        REFERENCES Booking(BookingID),
+
+    FOREIGN KEY (ShowID, ScreenID, SeatID)
+        REFERENCES ShowSeatAllocates(ShowID, ScreenID, SeatID)
 );
