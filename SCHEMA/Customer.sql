@@ -1,5 +1,3 @@
-use quickshow ;
-
 CREATE TABLE Customer(
     UserId INT PRIMARY KEY AUTO_INCREMENT,
 
