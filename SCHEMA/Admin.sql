@@ -1,4 +1,4 @@
--- Active: 1786808158409@@127.0.0.1@3306@quickshow
+-- Active: 1786808158409@@127.0.0.1@3306@mvv
 CREATE TABLE Admin (
     AdminID INT PRIMARY KEY AUTO_INCREMENT,
     FirstName VARCHAR(50),
