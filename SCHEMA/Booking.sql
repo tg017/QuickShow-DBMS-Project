@@ -5,9 +5,10 @@ CREATE TABLE Booking(
     BookingStatus ENUM(
         'PENDING',
         'CONFIRMED',
-        'FAILED'
+        'FAILED',
+        'CANCELLED'
     ) NOT NULL DEFAULT 'PENDING',
     TotalAmount BIGINT NOT NULL,
-    TotalSeatsCount INT ,
+    TotalSeatsCount INT NOT NULL CHECK (TotalSeatsCount > 0),
     FOREIGN KEY (UserID) REFERENCES Customer(UserID)
 );

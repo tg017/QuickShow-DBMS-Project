@@ -1,0 +1,4 @@
+DON'T Forget to include these enforcements
+
+1.  Booking must correspond to one Show, we have not included ShowID as an attribute in Booking,
+    so for the BookedSeats Table to be consistent we need this at application level.
