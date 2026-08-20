@@ -25,5 +25,5 @@ QuickShow is a web-based movie ticket booking and theatre management system buil
 Customer, Movie, Theatre, Screen, Seat, Show, Booking, Payment, Admin
 
 ## Docs
-- `DBMS Project RequirementWithoutNames` — Full requirement spec
-- `ERD_DBMS.pdf` — Entity Relationship Diagram
+- [Requirement Specification](./DBMS%20Project%20RequirementWithoutNames.pdf) — Full requirement spec
+- [ER Diagram](./ERD_DBMS.pdf) — Entity Relationship Diagram
