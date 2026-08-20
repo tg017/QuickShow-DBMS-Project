@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -27,4 +30,7 @@ public class Seat {
 
     @Column(name = "SeatNo", nullable = false)
     private Integer seatNo;
+
+    @OneToMany(mappedBy = "seat")
+    private List<ShowSeatAllocation> allocations = new ArrayList<>();
 }

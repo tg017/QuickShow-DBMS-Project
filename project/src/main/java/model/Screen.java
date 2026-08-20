@@ -38,4 +38,7 @@ public class Screen {
 
     @OneToMany(mappedBy = "screen")
     private List<Seat> seats = new ArrayList<>();
+
+    @OneToMany(mappedBy = "screen")
+    private List<Show> shows = new ArrayList<>();
 }
