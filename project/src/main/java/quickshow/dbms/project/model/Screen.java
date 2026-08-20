@@ -1,4 +1,4 @@
-package model;
+package quickshow.dbms.project.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,14 +22,14 @@ public class Screen {
     @Column(name = "ScreenID")
     private Integer screenId;
 
-    @Column(name = "Name", nullable = false, length = 50)
+    @Column(name = "ScreenName", nullable = false, length = 50)
     private String name;
 
     @Convert(converter = ScreenTypeConverter.class)
     @Column(name = "ScreenType", nullable = false)
     private ScreenType screenType;
 
-    @Column(name = "Capacity", nullable = false)
+    @Column(name = "SeatingCapacity", nullable = false)
     private Integer capacity;
 
     @ManyToOne(fetch = FetchType.LAZY)

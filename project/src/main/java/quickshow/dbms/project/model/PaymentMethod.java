@@ -1,4 +1,4 @@
-package model;
+package quickshow.dbms.project.model;
 
 public enum PaymentMethod {
     CREDIT_CARD,

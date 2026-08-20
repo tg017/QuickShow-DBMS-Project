@@ -1,4 +1,4 @@
-package model;
+package quickshow.dbms.project.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -26,7 +26,7 @@ public class Seat {
     private Screen screen;
 
     @Column(name = "RowNo", nullable = false)
-    private Integer rowNo;
+    private String rowNo;
 
     @Column(name = "SeatNo", nullable = false)
     private Integer seatNo;

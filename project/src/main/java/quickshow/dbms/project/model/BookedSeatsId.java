@@ -1,5 +1,5 @@
 
-package model;
+package quickshow.dbms.project.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

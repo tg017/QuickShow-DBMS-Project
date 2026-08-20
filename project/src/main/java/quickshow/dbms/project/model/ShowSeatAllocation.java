@@ -1,4 +1,7 @@
-package model;
+package quickshow.dbms.project.model;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,25 +14,19 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "BookedSeats")
-public class BookedSeats {
+@Table(name = "ShowSeatAllocates")
+public class ShowSeatAllocation {
 
     @EmbeddedId
-    private BookedSeatsId id;
+    private ShowSeatAllocationId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("bookingId")
-    @JoinColumn(name = "BookingID", nullable = false)
-    private Booking booking;
+    @MapsId("showId")
+    @JoinColumn(name = "ShowID", nullable = false)
+    private Show show;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({
-            @JoinColumn(
-                    name = "ShowID",
-                    referencedColumnName = "ShowID",
-                    insertable = false,
-                    updatable = false
-            ),
             @JoinColumn(
                     name = "ScreenID",
                     referencedColumnName = "ScreenID",
@@ -43,5 +40,12 @@ public class BookedSeats {
                     updatable = false
             )
     })
-    private ShowSeatAllocation seatAllocation;
+    private Seat seat;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "Status", nullable = false)
+    private SeatAllocationStatus status = SeatAllocationStatus.AVAILABLE;
+
+    @OneToMany(mappedBy = "seatAllocation")
+    private List<BookedSeats> bookedSeats = new ArrayList<>();
 }

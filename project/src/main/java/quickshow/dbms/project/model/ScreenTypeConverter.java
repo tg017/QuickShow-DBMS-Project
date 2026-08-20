@@ -1,4 +1,4 @@
-package model;
+package quickshow.dbms.project.model;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

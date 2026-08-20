@@ -1,4 +1,4 @@
-package model;
+package quickshow.dbms.project.model;
 
 import lombok.Getter;
 

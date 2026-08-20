@@ -1,4 +1,4 @@
-package model;
+package quickshow.dbms.project.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -51,7 +51,6 @@ public class Movie {
     @Column(name = "Director", length = 50)
     private String director;
 
-    @Lob
     @Column(name = "Description")
     private String description;
 
