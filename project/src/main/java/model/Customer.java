@@ -72,4 +72,7 @@ public class Customer {
         emails.remove(email);
         email.setCustomer(null);
     }
+
+    @OneToMany(mappedBy = "customer")
+    private List<Booking> bookings = new ArrayList<>();
 }

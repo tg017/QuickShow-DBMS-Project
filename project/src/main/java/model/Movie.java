@@ -57,6 +57,9 @@ public class Movie {
 
     @OneToMany(mappedBy = "movie")
     private List<MovieCast> cast = new ArrayList<>();
+
+    @OneToMany(mappedBy = "movie")
+    private List<Show> shows = new ArrayList<>();
 }
 
 /*
