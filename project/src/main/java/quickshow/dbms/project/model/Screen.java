@@ -25,9 +25,9 @@ public class Screen {
     @Column(name = "ScreenName", nullable = false, length = 50)
     private String name;
 
-    @Convert(converter = ScreenTypeConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(name = "ScreenType", nullable = false)
-    private ScreenType screenType;
+    private ScreenType screenType = ScreenType.TWO_D ;
 
     @Column(name = "SeatingCapacity", nullable = false)
     private Integer capacity;
