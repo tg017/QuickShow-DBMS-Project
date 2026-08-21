@@ -1,6 +1,7 @@
 package quickshow.dbms.project.service;
 
 import org.springframework.stereotype.Service;
+import quickshow.dbms.project.exception.ResourceNotFoundException;
 import quickshow.dbms.project.model.Movie;
 import quickshow.dbms.project.repository.MovieRepository;
 
@@ -49,7 +50,7 @@ public class MovieService {
                 movieRepository.findById(movieId);
 
         if (movie == null) {
-            throw new IllegalArgumentException(
+            throw new ResourceNotFoundException(
                     "Movie not found with ID: " + movieId
             );
         }
@@ -93,7 +94,7 @@ public class MovieService {
                 movieRepository.findById(movieId);
 
         if (existingMovie == null) {
-            throw new IllegalArgumentException(
+            throw new ResourceNotFoundException(
                     "Movie not found with ID: " + movieId
             );
         }
@@ -117,9 +118,7 @@ public class MovieService {
     // DELETE
     // =========================================================
 
-    public void deleteMovie(
-            Integer movieId
-    ) {
+    public void deleteMovie(Integer movieId) {
 
         if (movieId == null) {
             throw new IllegalArgumentException(
@@ -128,7 +127,7 @@ public class MovieService {
         }
 
         if (!movieRepository.existsById(movieId)) {
-            throw new IllegalArgumentException(
+            throw new ResourceNotFoundException(
                     "Movie not found with ID: " + movieId
             );
         }

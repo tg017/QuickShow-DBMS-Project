@@ -44,13 +44,9 @@ public class MovieController {
             @PathVariable Integer id
     ) {
 
-        Movie movie = movieService.getMovieById(id);
-
-        if (movie == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok(movie);
+        return ResponseEntity.ok(
+                movieService.getMovieById(id)
+        );
     }
 
 
