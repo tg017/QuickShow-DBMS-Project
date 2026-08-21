@@ -1,3 +1,4 @@
+-- Active: 1787082271926@@127.0.0.1@3306@quickshow
 CREATE TABLE Booking(
     BookingID INT PRIMARY KEY AUTO_INCREMENT,
     UserID INT NOT NULL,

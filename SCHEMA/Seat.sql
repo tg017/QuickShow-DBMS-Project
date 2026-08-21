@@ -2,7 +2,7 @@ CREATE TABLE Seat(
     ScreenID INT,
     SeatID INT,
 
-    RowNO VARCHAR(5) NOT NULL,
+    RowNo VARCHAR(5) NOT NULL,
     SeatNo INT NOT NULL,
 
     PRIMARY KEY (ScreenID, SeatID),

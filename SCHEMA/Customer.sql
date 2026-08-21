@@ -1,3 +1,4 @@
+-- Active: 1787082271926@@127.0.0.1@3306@quickshow
 CREATE TABLE Customer(
     UserId INT PRIMARY KEY AUTO_INCREMENT,
 
