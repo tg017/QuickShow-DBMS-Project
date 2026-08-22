@@ -1,6 +1,8 @@
 package quickshow.dbms.project.repository;
 
 import org.springframework.jdbc.core.RowMapper;
+import quickshow.dbms.project.model.Movie;
+import quickshow.dbms.project.model.Screen;
 import quickshow.dbms.project.model.Show;
 import quickshow.dbms.project.model.ShowStatus;
 
@@ -48,6 +50,39 @@ public class ShowRowMapper implements RowMapper<Show> {
             show.setShowStatus(
                     ShowStatus.valueOf(status)
             );
+        }
+
+        // =====================================================
+        // MOVIE
+        // =====================================================
+
+        int movieId =
+                rs.getInt("MovieID");
+
+        if (!rs.wasNull()) {
+
+            Movie movie = new Movie();
+
+            movie.setMovieId(movieId);
+
+            show.setMovie(movie);
+        }
+
+
+        // =====================================================
+        // SCREEN
+        // =====================================================
+
+        int screenId =
+                rs.getInt("ScreenID");
+
+        if (!rs.wasNull()) {
+
+            Screen screen = new Screen();
+
+            screen.setScreenId(screenId);
+
+            show.setScreen(screen);
         }
 
         return show;

@@ -173,6 +173,30 @@ public class ShowRepository {
         );
     }
 
+    public List<Show> findByMovie(Integer movieId) {
+
+        String sql = """
+            SELECT
+                ShowID,
+                ShowDate,
+                ShowTime,
+                TicketPrice,
+                AvailableSeats,
+                ShowStatus,
+                MovieID,
+                ScreenID
+            FROM `Show`
+            WHERE MovieID = ?
+            ORDER BY ShowDate, ShowTime
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                new ShowRowMapper(),
+                movieId
+        );
+    }
+
 
     // =========================================================
     // UPDATE
@@ -254,29 +278,18 @@ public class ShowRepository {
     // FIND BY MOVIE
     // =========================================================
 
-    public List<Show> findByMovie(
-            Integer movieId
-    ) {
-
-        String sql = """
-                SELECT
-                    ShowID,
-                    ShowDate,
-                    ShowTime,
-                    TicketPrice,
-                    AvailableSeats,
-                    ShowStatus
-                FROM `Show`
-                WHERE MovieID = ?
-                ORDER BY ShowDate, ShowTime
-                """;
-
-        return jdbcTemplate.query(
-                sql,
-                new ShowRowMapper(),
-                movieId
-        );
-    }
+    String sql = """
+        SELECT
+            ShowID,
+            ShowDate,
+            ShowTime,
+            TicketPrice,
+            AvailableSeats,
+            ShowStatus
+        FROM `Show`
+        WHERE MovieID = ?
+        ORDER BY ShowDate, ShowTime
+        """;
 
 
     // =========================================================

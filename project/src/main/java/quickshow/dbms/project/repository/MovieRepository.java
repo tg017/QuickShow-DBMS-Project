@@ -5,6 +5,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import quickshow.dbms.project.model.Movie;
+import quickshow.dbms.project.model.MovieCast;
+import quickshow.dbms.project.model.MovieCastId;
+import quickshow.dbms.project.model.Show;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -96,32 +99,107 @@ public class MovieRepository {
         public Movie findById(Integer movieId) {
 
                 String sql = """
-                                SELECT
-                                    MovieID,
-                                    Title,
-                                    Poster,
-                                    Language,
-                                    Genre,
-                                    Duration,
-                                    ReleaseDate,
-                                    IMDbRating,
-                                    Certificate,
-                                    Director,
-                                    Description
-                                FROM Movie
-                                WHERE MovieID = ?
-                                """;
+            SELECT
+                MovieID,
+                Title,
+                Poster,
+                Language,
+                Genre,
+                Duration,
+                ReleaseDate,
+                IMDbRating,
+                Certificate,
+                Director,
+                Description
+            FROM Movie
+            WHERE MovieID = ?
+            """;
 
-                List<Movie> movies = jdbcTemplate.query(
+                List<Movie> movies =
+                        jdbcTemplate.query(
                                 sql,
                                 new MovieRowMapper(),
-                                movieId);
+                                movieId
+                        );
 
                 if (movies.isEmpty()) {
                         return null;
                 }
 
-                return movies.get(0);
+                Movie movie = movies.get(0);
+
+
+                // =========================================================
+                // LOAD CAST
+                // =========================================================
+
+                String castSql = """
+        SELECT
+            MovieID,
+            Actor
+        FROM MovieCast
+        WHERE MovieID = ?
+        ORDER BY Actor
+        """;
+
+                List<MovieCast> cast =
+                        jdbcTemplate.query(
+                                castSql,
+                                (rs, rowNum) -> {
+
+                                        MovieCast movieCast =
+                                                new MovieCast();
+
+                                        MovieCastId id =
+                                                new MovieCastId();
+
+                                        id.setMovieId(
+                                                rs.getInt("MovieID")
+                                        );
+
+                                        id.setActor(
+                                                rs.getString("Actor")
+                                        );
+
+                                        movieCast.setId(id);
+
+                                        return movieCast;
+                                },
+                                movieId
+                        );
+
+                movie.setCast(cast);
+
+
+                // =========================================================
+                // LOAD SHOWS
+                // =========================================================
+
+                String showSql = """
+            SELECT
+                ShowID,
+                ShowDate,
+                ShowTime,
+                TicketPrice,
+                AvailableSeats,
+                ShowStatus,
+                MovieID,
+                ScreenID
+            FROM `Show`
+            WHERE MovieID = ?
+            ORDER BY ShowDate, ShowTime
+            """;
+
+                List<Show> shows =
+                        jdbcTemplate.query(
+                                showSql,
+                                new ShowRowMapper(),
+                                movieId
+                        );
+
+                movie.setShows(shows);
+
+                return movie;
         }
 
         // =========================================================
