@@ -5,7 +5,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import quickshow.dbms.project.model.Movie;
 import quickshow.dbms.project.model.MovieCast;
+import quickshow.dbms.project.model.Show;
 import quickshow.dbms.project.service.MovieService;
+import quickshow.dbms.project.service.ShowService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,9 +17,13 @@ import java.util.List;
 public class MovieController {
 
         private final MovieService movieService;
+        private final ShowService showService;
 
-        public MovieController(MovieService movieService) {
+        public MovieController(
+                        MovieService movieService,
+                        ShowService showService) {
                 this.movieService = movieService;
+                this.showService = showService;
         }
 
         // =========================================================
@@ -86,12 +92,24 @@ public class MovieController {
 
         @GetMapping("/{movieId}/cast")
         public ResponseEntity<List<MovieCast>> getMovieCast(
-                @PathVariable Integer movieId
-        ) {
+                        @PathVariable Integer movieId) {
 
-        return ResponseEntity.ok(
-                movieService.getMovieCast(movieId)
-        );
+                return ResponseEntity.ok(
+                                movieService.getMovieCast(movieId));
+        }
+
+        // =========================================================
+        // GET SHOWS FOR MOVIE
+        // GET /api/movies/{movieId}/shows
+        // =========================================================
+
+        @GetMapping("/{movieId}/shows")
+        public ResponseEntity<List<Show>> getShowsByMovie(
+                        @PathVariable Integer movieId) {
+
+                return ResponseEntity.ok(
+                                showService.getShowsByMovie(
+                                                movieId));
         }
 
         // =========================================================

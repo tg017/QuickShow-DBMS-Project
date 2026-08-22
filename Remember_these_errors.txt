@@ -1,0 +1,2 @@
+1.  The ShowRowMapper is not mapping the movieId and screenId, so when the show is returned from service function
+	the movieId and screenId column/field is null.
