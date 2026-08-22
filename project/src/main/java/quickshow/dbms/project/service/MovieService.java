@@ -3,7 +3,9 @@ package quickshow.dbms.project.service;
 import org.springframework.stereotype.Service;
 import quickshow.dbms.project.exception.ResourceNotFoundException;
 import quickshow.dbms.project.model.Movie;
+import quickshow.dbms.project.model.MovieCast;
 import quickshow.dbms.project.repository.MovieRepository;
+import quickshow.dbms.project.repository.MovieCastRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,9 +14,13 @@ import java.util.List;
 public class MovieService {
 
         private final MovieRepository movieRepository;
+        private final MovieCastRepository movieCastRepository;
 
-        public MovieService(MovieRepository movieRepository) {
+        public MovieService(
+                        MovieRepository movieRepository,
+                        MovieCastRepository movieCastRepository) {
                 this.movieRepository = movieRepository;
+                this.movieCastRepository = movieCastRepository;
         }
 
         // =========================================================
@@ -160,5 +166,26 @@ public class MovieService {
                                 genre,
                                 certificate,
                                 minRating);
+        }
+
+        // =========================================================
+        // GET MOVIE CAST
+        // =========================================================
+
+        public List<MovieCast> getMovieCast(
+                        Integer movieId) {
+
+                if (movieId == null) {
+                        throw new IllegalArgumentException(
+                                        "Movie ID cannot be null");
+                }
+
+                if (!movieRepository.existsById(movieId)) {
+                        throw new ResourceNotFoundException(
+                                        "Movie not found with ID: " + movieId);
+                }
+
+                return movieCastRepository.findByMovie(
+                                movieId);
         }
 }

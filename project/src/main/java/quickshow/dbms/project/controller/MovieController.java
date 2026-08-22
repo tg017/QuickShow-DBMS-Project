@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import quickshow.dbms.project.model.Movie;
+import quickshow.dbms.project.model.MovieCast;
 import quickshow.dbms.project.service.MovieService;
 
 import java.math.BigDecimal;
@@ -76,6 +77,21 @@ public class MovieController {
                                                 genre,
                                                 certificate,
                                                 minRating));
+        }
+
+        // =========================================================
+        // GET MOVIE CAST
+        // GET /api/movies/{movieId}/cast
+        // =========================================================
+
+        @GetMapping("/{movieId}/cast")
+        public ResponseEntity<List<MovieCast>> getMovieCast(
+                @PathVariable Integer movieId
+        ) {
+
+        return ResponseEntity.ok(
+                movieService.getMovieCast(movieId)
+        );
         }
 
         // =========================================================
