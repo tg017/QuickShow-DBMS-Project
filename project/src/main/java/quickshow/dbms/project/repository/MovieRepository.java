@@ -13,314 +13,312 @@ import java.util.List;
 @Repository
 public class MovieRepository {
 
-    private final JdbcTemplate jdbcTemplate;
+        private final JdbcTemplate jdbcTemplate;
 
-    public MovieRepository(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
-
-
-    // =========================================================
-    // CREATE
-    // =========================================================
-
-    public Movie create(Movie movie) {
-
-        String sql = """
-                INSERT INTO Movie
-                    (
-                        Title,
-                        Poster,
-                        Language,
-                        Genre,
-                        Duration,
-                        ReleaseDate,
-                        IMDbRating,
-                        Certificate,
-                        Director,
-                        Description
-                    )
-                VALUES
-                    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
-
-        KeyHolder keyHolder =
-                new GeneratedKeyHolder();
-
-        jdbcTemplate.update(connection -> {
-
-            PreparedStatement statement =
-                    connection.prepareStatement(
-                            sql,
-                            Statement.RETURN_GENERATED_KEYS
-                    );
-
-            statement.setString(1, movie.getTitle());
-            statement.setString(2, movie.getPoster());
-            statement.setString(3, movie.getLanguage());
-            statement.setString(4, movie.getGenre());
-            statement.setObject(5, movie.getDuration());
-            statement.setObject(6, movie.getReleaseDate());
-            statement.setObject(7, movie.getImdbRating());
-
-            if (movie.getCertificate() != null) {
-                statement.setString(
-                        8,
-                        movie.getCertificate().name()
-                );
-            } else {
-                statement.setNull(
-                        8,
-                        java.sql.Types.VARCHAR
-                );
-            }
-
-            statement.setString(9, movie.getDirector());
-            statement.setString(10, movie.getDescription());
-
-            return statement;
-
-        }, keyHolder);
-
-        Number generatedId =
-                keyHolder.getKey();
-
-        if (generatedId == null) {
-            throw new IllegalStateException(
-                    "MovieID was not generated"
-            );
+        public MovieRepository(JdbcTemplate jdbcTemplate) {
+                this.jdbcTemplate = jdbcTemplate;
         }
 
-        movie.setMovieId(
-                generatedId.intValue()
-        );
+        // =========================================================
+        // CREATE
+        // =========================================================
 
-        return movie;
-    }
+        public Movie create(Movie movie) {
 
+                String sql = """
+                                INSERT INTO Movie
+                                    (
+                                        Title,
+                                        Poster,
+                                        Language,
+                                        Genre,
+                                        Duration,
+                                        ReleaseDate,
+                                        IMDbRating,
+                                        Certificate,
+                                        Director,
+                                        Description
+                                    )
+                                VALUES
+                                    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """;
 
-    // =========================================================
-    // READ BY ID
-    // =========================================================
+                KeyHolder keyHolder = new GeneratedKeyHolder();
 
-    public Movie findById(Integer movieId) {
+                jdbcTemplate.update(connection -> {
 
-        String sql = """
-                SELECT
-                    MovieID,
-                    Title,
-                    Poster,
-                    Language,
-                    Genre,
-                    Duration,
-                    ReleaseDate,
-                    IMDbRating,
-                    Certificate,
-                    Director,
-                    Description
-                FROM Movie
-                WHERE MovieID = ?
-                """;
+                        PreparedStatement statement = connection.prepareStatement(
+                                        sql,
+                                        Statement.RETURN_GENERATED_KEYS);
 
-        List<Movie> movies =
-                jdbcTemplate.query(
-                        sql,
-                        new MovieRowMapper(),
-                        movieId
-                );
+                        statement.setString(1, movie.getTitle());
+                        statement.setString(2, movie.getPoster());
+                        statement.setString(3, movie.getLanguage());
+                        statement.setString(4, movie.getGenre());
+                        statement.setObject(5, movie.getDuration());
+                        statement.setObject(6, movie.getReleaseDate());
+                        statement.setObject(7, movie.getImdbRating());
 
-        if (movies.isEmpty()) {
-            return null;
+                        if (movie.getCertificate() != null) {
+                                statement.setString(
+                                                8,
+                                                movie.getCertificate().name());
+                        } else {
+                                statement.setNull(
+                                                8,
+                                                java.sql.Types.VARCHAR);
+                        }
+
+                        statement.setString(9, movie.getDirector());
+                        statement.setString(10, movie.getDescription());
+
+                        return statement;
+
+                }, keyHolder);
+
+                Number generatedId = keyHolder.getKey();
+
+                if (generatedId == null) {
+                        throw new IllegalStateException(
+                                        "MovieID was not generated");
+                }
+
+                movie.setMovieId(
+                                generatedId.intValue());
+
+                return movie;
         }
 
-        return movies.get(0);
-    }
+        // =========================================================
+        // READ BY ID
+        // =========================================================
 
+        public Movie findById(Integer movieId) {
 
-    // =========================================================
-    // READ ALL
-    // =========================================================
+                String sql = """
+                                SELECT
+                                    MovieID,
+                                    Title,
+                                    Poster,
+                                    Language,
+                                    Genre,
+                                    Duration,
+                                    ReleaseDate,
+                                    IMDbRating,
+                                    Certificate,
+                                    Director,
+                                    Description
+                                FROM Movie
+                                WHERE MovieID = ?
+                                """;
 
-    public List<Movie> findAll() {
+                List<Movie> movies = jdbcTemplate.query(
+                                sql,
+                                new MovieRowMapper(),
+                                movieId);
 
-        String sql = """
-                SELECT
-                    MovieID,
-                    Title,
-                    Poster,
-                    Language,
-                    Genre,
-                    Duration,
-                    ReleaseDate,
-                    IMDbRating,
-                    Certificate,
-                    Director,
-                    Description
-                FROM Movie
-                ORDER BY MovieID
-                """;
+                if (movies.isEmpty()) {
+                        return null;
+                }
 
-        return jdbcTemplate.query(
-                sql,
-                new MovieRowMapper()
-        );
-    }
-
-
-    // =========================================================
-    // UPDATE
-    // =========================================================
-
-    public int update(Movie movie) {
-
-        String sql = """
-                UPDATE Movie
-                SET
-                    Title = ?,
-                    Poster = ?,
-                    Language = ?,
-                    Genre = ?,
-                    Duration = ?,
-                    ReleaseDate = ?,
-                    IMDbRating = ?,
-                    Certificate = ?,
-                    Director = ?,
-                    Description = ?
-                WHERE MovieID = ?
-                """;
-
-        String certificate = null;
-
-        if (movie.getCertificate() != null) {
-            certificate =
-                    movie.getCertificate().name();
+                return movies.get(0);
         }
 
-        return jdbcTemplate.update(
-                sql,
-                movie.getTitle(),
-                movie.getPoster(),
-                movie.getLanguage(),
-                movie.getGenre(),
-                movie.getDuration(),
-                movie.getReleaseDate(),
-                movie.getImdbRating(),
-                certificate,
-                movie.getDirector(),
-                movie.getDescription(),
-                movie.getMovieId()
-        );
-    }
+        // =========================================================
+        // READ ALL
+        // =========================================================
 
+        public List<Movie> findAll() {
 
-    // =========================================================
-    // DELETE
-    // =========================================================
+                String sql = """
+                                SELECT
+                                    MovieID,
+                                    Title,
+                                    Poster,
+                                    Language,
+                                    Genre,
+                                    Duration,
+                                    ReleaseDate,
+                                    IMDbRating,
+                                    Certificate,
+                                    Director,
+                                    Description
+                                FROM Movie
+                                ORDER BY MovieID
+                                """;
 
-    public int deleteById(Integer movieId) {
+                return jdbcTemplate.query(
+                                sql,
+                                new MovieRowMapper());
+        }
 
-        String sql = """
-                DELETE FROM Movie
-                WHERE MovieID = ?
-                """;
+        // =========================================================
+        // UPDATE
+        // =========================================================
 
-        return jdbcTemplate.update(
-                sql,
-                movieId
-        );
-    }
+        public int update(Movie movie) {
 
+                String sql = """
+                                UPDATE Movie
+                                SET
+                                    Title = ?,
+                                    Poster = ?,
+                                    Language = ?,
+                                    Genre = ?,
+                                    Duration = ?,
+                                    ReleaseDate = ?,
+                                    IMDbRating = ?,
+                                    Certificate = ?,
+                                    Director = ?,
+                                    Description = ?
+                                WHERE MovieID = ?
+                                """;
 
-    // =========================================================
-    // EXISTS
-    // =========================================================
+                String certificate = null;
 
-    public boolean existsById(Integer movieId) {
+                if (movie.getCertificate() != null) {
+                        certificate = movie.getCertificate().name();
+                }
 
-        String sql = """
-                SELECT COUNT(*)
-                FROM Movie
-                WHERE MovieID = ?
-                """;
+                return jdbcTemplate.update(
+                                sql,
+                                movie.getTitle(),
+                                movie.getPoster(),
+                                movie.getLanguage(),
+                                movie.getGenre(),
+                                movie.getDuration(),
+                                movie.getReleaseDate(),
+                                movie.getImdbRating(),
+                                certificate,
+                                movie.getDirector(),
+                                movie.getDescription(),
+                                movie.getMovieId());
+        }
 
-        Integer count =
-                jdbcTemplate.queryForObject(
-                        sql,
-                        Integer.class,
-                        movieId
-                );
+        // =========================================================
+        // DELETE
+        // =========================================================
 
-        return count != null && count > 0;
-    }
+        public int deleteById(Integer movieId) {
 
+                String sql = """
+                                DELETE FROM Movie
+                                WHERE MovieID = ?
+                                """;
 
-    // =========================================================
-    // FIND BY LANGUAGE
-    // =========================================================
+                return jdbcTemplate.update(
+                                sql,
+                                movieId);
+        }
 
-    public List<Movie> findByLanguage(
-            String language
-    ) {
+        // =========================================================
+        // EXISTS
+        // =========================================================
 
-        String sql = """
-                SELECT
-                    MovieID,
-                    Title,
-                    Poster,
-                    Language,
-                    Genre,
-                    Duration,
-                    ReleaseDate,
-                    IMDbRating,
-                    Certificate,
-                    Director,
-                    Description
-                FROM Movie
-                WHERE Language = ?
-                ORDER BY Title
-                """;
+        public boolean existsById(Integer movieId) {
 
-        return jdbcTemplate.query(
-                sql,
-                new MovieRowMapper(),
-                language
-        );
-    }
+                String sql = """
+                                SELECT COUNT(*)
+                                FROM Movie
+                                WHERE MovieID = ?
+                                """;
 
+                Integer count = jdbcTemplate.queryForObject(
+                                sql,
+                                Integer.class,
+                                movieId);
 
-    // =========================================================
-    // FIND BY GENRE AND MINIMUM RATING
-    // =========================================================
+                return count != null && count > 0;
+        }
 
-    public List<Movie> findByGenreAndMinimumRating(
-            String genre,
-            java.math.BigDecimal minimumRating
-    ) {
+        // =========================================================
+        // COMBINED SEARCH
+        // GET /api/movies/search
+        // =========================================================
 
-        String sql = """
-                SELECT
-                    MovieID,
-                    Title,
-                    Poster,
-                    Language,
-                    Genre,
-                    Duration,
-                    ReleaseDate,
-                    IMDbRating,
-                    Certificate,
-                    Director,
-                    Description
-                FROM Movie
-                WHERE Genre = ?
-                  AND IMDbRating >= ?
-                ORDER BY IMDbRating DESC
-                """;
+        public List<Movie> searchMovies(
+                        String title,
+                        String language,
+                        String genre,
+                        String certificate,
+                        java.math.BigDecimal minRating) {
 
-        return jdbcTemplate.query(
-                sql,
-                new MovieRowMapper(),
-                genre,
-                minimumRating
-        );
-    }
+                StringBuilder sql = new StringBuilder("""
+                                SELECT
+                                    MovieID,
+                                    Title,
+                                    Poster,
+                                    Language,
+                                    Genre,
+                                    Duration,
+                                    ReleaseDate,
+                                    IMDbRating,
+                                    Certificate,
+                                    Director,
+                                    Description
+                                FROM Movie
+                                WHERE 1 = 1
+                                """);
+
+                List<Object> params = new java.util.ArrayList<>();
+
+                // Title search
+                if (title != null && !title.isBlank()) {
+
+                        sql.append("""
+                                        AND Title LIKE ?
+                                        """);
+
+                        params.add("%" + title.trim() + "%");
+                }
+
+                // Language filter
+                if (language != null && !language.isBlank()) {
+
+                        sql.append("""
+                                        AND Language = ?
+                                        """);
+
+                        params.add(language.trim());
+                }
+
+                // Genre filter
+                if (genre != null && !genre.isBlank()) {
+
+                        sql.append("""
+                                        AND Genre = ?
+                                        """);
+
+                        params.add(genre.trim());
+                }
+
+                // Certificate filter
+                if (certificate != null && !certificate.isBlank()) {
+
+                        sql.append("""
+                                        AND Certificate = ?
+                                        """);
+
+                        params.add(certificate.trim());
+                }
+
+                // Minimum IMDb rating
+                if (minRating != null) {
+
+                        sql.append("""
+                                        AND IMDbRating >= ?
+                                        """);
+
+                        params.add(minRating);
+                }
+
+                sql.append("""
+                                ORDER BY Title
+                                """);
+
+                return jdbcTemplate.query(
+                                sql.toString(),
+                                new MovieRowMapper(),
+                                params.toArray());
+        }
 }

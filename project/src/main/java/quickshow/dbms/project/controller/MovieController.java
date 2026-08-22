@@ -13,139 +13,117 @@ import java.util.List;
 @RequestMapping("/api/movies")
 public class MovieController {
 
-    private final MovieService movieService;
+        private final MovieService movieService;
 
-    public MovieController(MovieService movieService) {
-        this.movieService = movieService;
-    }
+        public MovieController(MovieService movieService) {
+                this.movieService = movieService;
+        }
 
+        // =========================================================
+        // GET ALL MOVIES
+        // GET /movies
+        // =========================================================
 
-    // =========================================================
-    // GET ALL MOVIES
-    // GET /movies
-    // =========================================================
+        @GetMapping
+        public ResponseEntity<List<Movie>> getAllMovies() {
 
-    @GetMapping
-    public ResponseEntity<List<Movie>> getAllMovies() {
+                return ResponseEntity.ok(
+                                movieService.getAllMovies());
+        }
 
-        return ResponseEntity.ok(
-                movieService.getAllMovies()
-        );
-    }
+        // =========================================================
+        // GET MOVIE BY ID
+        // GET /movies/{id}
+        // =========================================================
 
+        @GetMapping("/{id}")
+        public ResponseEntity<Movie> getMovieById(
+                        @PathVariable Integer id) {
 
-    // =========================================================
-    // GET MOVIE BY ID
-    // GET /movies/{id}
-    // =========================================================
+                return ResponseEntity.ok(
+                                movieService.getMovieById(id));
+        }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Movie> getMovieById(
-            @PathVariable Integer id
-    ) {
+        // =========================================================
+        // COMBINED MOVIE SEARCH
+        //
+        // GET /api/movies/search
+        //
+        // Examples:
+        // /api/movies/search?title=dark
+        // /api/movies/search?language=English
+        // /api/movies/search?genre=Sci-Fi&minRating=8.0
+        // /api/movies/search?title=dark&language=English&certificate=UA_13_PLUS
+        // =========================================================
 
-        return ResponseEntity.ok(
-                movieService.getMovieById(id)
-        );
-    }
+        @GetMapping("/search")
+        public ResponseEntity<List<Movie>> searchMovies(
 
+                        @RequestParam(required = false) String title,
 
-    // =========================================================
-    // SEARCH BY LANGUAGE
-    // GET /movies/search/language/{language}
-    // =========================================================
+                        @RequestParam(required = false) String language,
 
-    @GetMapping("/search/language/{language}")
-    public ResponseEntity<List<Movie>> getMoviesByLanguage(
-            @PathVariable String language
-    ) {
+                        @RequestParam(required = false) String genre,
 
-        return ResponseEntity.ok(
-                movieService.getMoviesByLanguage(
-                        language
-                )
-        );
-    }
+                        @RequestParam(required = false) String certificate,
 
+                        @RequestParam(required = false) BigDecimal minRating) {
 
-    // =========================================================
-    // SEARCH BY GENRE + RATING
-    //
-    // GET /movies/search/genre/Sci-Fi?minRating=8.0
-    // =========================================================
+                return ResponseEntity.ok(
+                                movieService.searchMovies(
+                                                title,
+                                                language,
+                                                genre,
+                                                certificate,
+                                                minRating));
+        }
 
-    @GetMapping("/search/genre/{genre}")
-    public ResponseEntity<List<Movie>>
-    getMoviesByGenreAndMinimumRating(
-            @PathVariable String genre,
-            @RequestParam BigDecimal minRating
-    ) {
+        // =========================================================
+        // CREATE
+        // POST /movies
+        // =========================================================
 
-        return ResponseEntity.ok(
-                movieService
-                        .getMoviesByGenreAndMinimumRating(
-                                genre,
-                                minRating
-                        )
-        );
-    }
+        @PostMapping
+        public ResponseEntity<Movie> createMovie(
+                        @RequestBody Movie movie) {
 
+                Movie createdMovie = movieService.createMovie(movie);
 
-    // =========================================================
-    // CREATE
-    // POST /movies
-    // =========================================================
+                return ResponseEntity
+                                .status(HttpStatus.CREATED)
+                                .body(createdMovie);
+        }
 
-    @PostMapping
-    public ResponseEntity<Movie> createMovie(
-            @RequestBody Movie movie
-    ) {
+        // =========================================================
+        // UPDATE
+        // PUT /movies/{id}
+        // =========================================================
 
-        Movie createdMovie =
-                movieService.createMovie(movie);
+        @PutMapping("/{id}")
+        public ResponseEntity<Movie> updateMovie(
+                        @PathVariable Integer id,
+                        @RequestBody Movie movie) {
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(createdMovie);
-    }
+                Movie updatedMovie = movieService.updateMovie(
+                                id,
+                                movie);
 
+                return ResponseEntity.ok(
+                                updatedMovie);
+        }
 
-    // =========================================================
-    // UPDATE
-    // PUT /movies/{id}
-    // =========================================================
+        // =========================================================
+        // DELETE
+        // DELETE /movies/{id}
+        // =========================================================
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Movie> updateMovie(
-            @PathVariable Integer id,
-            @RequestBody Movie movie
-    ) {
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> deleteMovie(
+                        @PathVariable Integer id) {
 
-        Movie updatedMovie =
-                movieService.updateMovie(
-                        id,
-                        movie
-                );
+                movieService.deleteMovie(id);
 
-        return ResponseEntity.ok(
-                updatedMovie
-        );
-    }
-
-
-    // =========================================================
-    // DELETE
-    // DELETE /movies/{id}
-    // =========================================================
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteMovie(
-            @PathVariable Integer id
-    ) {
-
-        movieService.deleteMovie(id);
-
-        return ResponseEntity.noContent()
-                .build();
-    }
+                return ResponseEntity.noContent()
+                                .build();
+        }
 }

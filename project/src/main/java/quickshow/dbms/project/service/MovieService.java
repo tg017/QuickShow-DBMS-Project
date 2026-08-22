@@ -11,183 +11,154 @@ import java.util.List;
 @Service
 public class MovieService {
 
-    private final MovieRepository movieRepository;
+        private final MovieRepository movieRepository;
 
-    public MovieService(MovieRepository movieRepository) {
-        this.movieRepository = movieRepository;
-    }
-
-
-    // =========================================================
-    // CREATE
-    // =========================================================
-
-    public Movie createMovie(Movie movie) {
-
-        if (movie == null) {
-            throw new IllegalArgumentException(
-                    "Movie cannot be null"
-            );
+        public MovieService(MovieRepository movieRepository) {
+                this.movieRepository = movieRepository;
         }
 
-        return movieRepository.create(movie);
-    }
+        // =========================================================
+        // CREATE
+        // =========================================================
 
+        public Movie createMovie(Movie movie) {
 
-    // =========================================================
-    // READ BY ID
-    // =========================================================
+                if (movie == null) {
+                        throw new IllegalArgumentException(
+                                        "Movie cannot be null");
+                }
 
-    public Movie getMovieById(Integer movieId) {
-
-        if (movieId == null) {
-            throw new IllegalArgumentException(
-                    "Movie ID cannot be null"
-            );
+                return movieRepository.create(movie);
         }
 
-        Movie movie =
-                movieRepository.findById(movieId);
+        // =========================================================
+        // READ BY ID
+        // =========================================================
 
-        if (movie == null) {
-            throw new ResourceNotFoundException(
-                    "Movie not found with ID: " + movieId
-            );
+        public Movie getMovieById(Integer movieId) {
+
+                if (movieId == null) {
+                        throw new IllegalArgumentException(
+                                        "Movie ID cannot be null");
+                }
+
+                Movie movie = movieRepository.findById(movieId);
+
+                if (movie == null) {
+                        throw new ResourceNotFoundException(
+                                        "Movie not found with ID: " + movieId);
+                }
+
+                return movie;
         }
 
-        return movie;
-    }
+        // =========================================================
+        // READ ALL
+        // =========================================================
 
+        public List<Movie> getAllMovies() {
 
-    // =========================================================
-    // READ ALL
-    // =========================================================
-
-    public List<Movie> getAllMovies() {
-
-        return movieRepository.findAll();
-    }
-
-
-    // =========================================================
-    // UPDATE
-    // =========================================================
-
-    public Movie updateMovie(
-            Integer movieId,
-            Movie movie
-    ) {
-
-        if (movieId == null) {
-            throw new IllegalArgumentException(
-                    "Movie ID cannot be null"
-            );
+                return movieRepository.findAll();
         }
 
-        if (movie == null) {
-            throw new IllegalArgumentException(
-                    "Movie cannot be null"
-            );
+        // =========================================================
+        // UPDATE
+        // =========================================================
+
+        public Movie updateMovie(
+                        Integer movieId,
+                        Movie movie) {
+
+                if (movieId == null) {
+                        throw new IllegalArgumentException(
+                                        "Movie ID cannot be null");
+                }
+
+                if (movie == null) {
+                        throw new IllegalArgumentException(
+                                        "Movie cannot be null");
+                }
+
+                Movie existingMovie = movieRepository.findById(movieId);
+
+                if (existingMovie == null) {
+                        throw new ResourceNotFoundException(
+                                        "Movie not found with ID: " + movieId);
+                }
+
+                movie.setMovieId(movieId);
+
+                int rowsUpdated = movieRepository.update(movie);
+
+                if (rowsUpdated != 1) {
+                        throw new IllegalStateException(
+                                        "Movie could not be updated");
+                }
+
+                return movieRepository.findById(movieId);
         }
 
-        Movie existingMovie =
-                movieRepository.findById(movieId);
+        // =========================================================
+        // DELETE
+        // =========================================================
 
-        if (existingMovie == null) {
-            throw new ResourceNotFoundException(
-                    "Movie not found with ID: " + movieId
-            );
+        public void deleteMovie(Integer movieId) {
+
+                if (movieId == null) {
+                        throw new IllegalArgumentException(
+                                        "Movie ID cannot be null");
+                }
+
+                if (!movieRepository.existsById(movieId)) {
+                        throw new ResourceNotFoundException(
+                                        "Movie not found with ID: " + movieId);
+                }
+
+                int rowsDeleted = movieRepository.deleteById(movieId);
+
+                if (rowsDeleted != 1) {
+                        throw new IllegalStateException(
+                                        "Movie could not be deleted");
+                }
         }
 
-        movie.setMovieId(movieId);
+        // =========================================================
+        // COMBINED MOVIE SEARCH
+        // =========================================================
 
-        int rowsUpdated =
-                movieRepository.update(movie);
+        public List<Movie> searchMovies(
+                        String title,
+                        String language,
+                        String genre,
+                        String certificate,
+                        BigDecimal minRating) {
 
-        if (rowsUpdated != 1) {
-            throw new IllegalStateException(
-                    "Movie could not be updated"
-            );
+                if (title != null && title.isBlank()) {
+                        title = null;
+                }
+
+                if (language != null && language.isBlank()) {
+                        language = null;
+                }
+
+                if (genre != null && genre.isBlank()) {
+                        genre = null;
+                }
+
+                if (certificate != null && certificate.isBlank()) {
+                        certificate = null;
+                }
+
+                if (minRating != null && minRating.compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalArgumentException(
+                                        "Minimum rating cannot be negative");
+                }
+
+                return movieRepository.searchMovies(
+                                title,
+                                language,
+                                genre,
+                                certificate,
+                                minRating);
         }
-
-        return movieRepository.findById(movieId);
-    }
-
-
-    // =========================================================
-    // DELETE
-    // =========================================================
-
-    public void deleteMovie(Integer movieId) {
-
-        if (movieId == null) {
-            throw new IllegalArgumentException(
-                    "Movie ID cannot be null"
-            );
-        }
-
-        if (!movieRepository.existsById(movieId)) {
-            throw new ResourceNotFoundException(
-                    "Movie not found with ID: " + movieId
-            );
-        }
-
-        int rowsDeleted =
-                movieRepository.deleteById(movieId);
-
-        if (rowsDeleted != 1) {
-            throw new IllegalStateException(
-                    "Movie could not be deleted"
-            );
-        }
-    }
-
-
-    // =========================================================
-    // SEARCH BY LANGUAGE
-    // =========================================================
-
-    public List<Movie> getMoviesByLanguage(
-            String language
-    ) {
-
-        if (language == null || language.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Language cannot be empty"
-            );
-        }
-
-        return movieRepository.findByLanguage(
-                language
-        );
-    }
-
-
-    // =========================================================
-    // SEARCH BY GENRE + MINIMUM RATING
-    // =========================================================
-
-    public List<Movie> getMoviesByGenreAndMinimumRating(
-            String genre,
-            BigDecimal minimumRating
-    ) {
-
-        if (genre == null || genre.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Genre cannot be empty"
-            );
-        }
-
-        if (minimumRating == null) {
-            throw new IllegalArgumentException(
-                    "Minimum rating cannot be null"
-            );
-        }
-
-        return movieRepository
-                .findByGenreAndMinimumRating(
-                        genre,
-                        minimumRating
-                );
-    }
 }
