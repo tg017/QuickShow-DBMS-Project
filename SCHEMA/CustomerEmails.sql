@@ -1,6 +1,6 @@
 CREATE TABLE CustomerEmails(
     UserID INT,
-    Email VARCHAR(30) UNIQUE,
+    Email VARCHAR(100) UNIQUE,
 
     PRIMARY KEY (UserID, Email),
 

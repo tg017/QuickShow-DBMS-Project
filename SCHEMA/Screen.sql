@@ -4,12 +4,12 @@ CREATE TABLE Screen(
     ScreenName VARCHAR(50) NOT NULL,
 
     ScreenType ENUM(
-        '2D',
-        '3D',
+        'TWO_D',
+        'THREE_D',
         'IMAX',
-        'IMAX3D',
-        '4DX'
-    ) DEFAULT '2D',
+        'IMAX_3D',
+        'FOUR_DX'
+    ) DEFAULT 'TWO_D',
 
     SeatingCapacity INT NOT NULL
         CHECK (SeatingCapacity >= 0),

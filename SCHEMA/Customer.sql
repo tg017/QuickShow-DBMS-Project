@@ -2,9 +2,9 @@
 CREATE TABLE Customer(
     UserId INT PRIMARY KEY AUTO_INCREMENT,
 
-    FirstName VARCHAR(20) NOT NULL,
-    MiddleName VARCHAR(20),
-    LastName VARCHAR(20),
+    FirstName VARCHAR(100) NOT NULL,
+    MiddleName VARCHAR(100),
+    LastName VARCHAR(100),
 
     DOB DATE,
     Gender ENUM('M', 'F', 'O'),
