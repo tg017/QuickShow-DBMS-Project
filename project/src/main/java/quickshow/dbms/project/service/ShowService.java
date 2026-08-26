@@ -1,9 +1,7 @@
 package quickshow.dbms.project.service;
 
 import org.springframework.stereotype.Service;
-import quickshow.dbms.project.dto.MovieShowDTO;
-import quickshow.dbms.project.dto.MovieShowWithTheatreDTO;
-import quickshow.dbms.project.dto.TheatreShowsDTO;
+import quickshow.dbms.project.dto.*;
 import quickshow.dbms.project.exception.ResourceNotFoundException;
 import quickshow.dbms.project.repository.ShowRepository;
 
@@ -105,5 +103,45 @@ public class ShowService {
         }
 
         return result;
+    }
+
+    public SeatLayoutDTO getSeatLayout(
+            Integer showId
+    ) {
+
+        if (showId == null) {
+            throw new ResourceNotFoundException(
+                    "Show ID cannot be null"
+            );
+        }
+
+        SeatLayoutDTO seatLayout =
+                showRepository.findSeatLayoutShow(
+                        showId
+                );
+
+        if (seatLayout == null) {
+            throw new ResourceNotFoundException(
+                    "Show not found"
+            );
+        }
+
+        List<SeatDTO> seats =
+                showRepository.findSeatsByShowId(
+                        showId
+                );
+
+        return new SeatLayoutDTO(
+                seatLayout.getShowId(),
+                seatLayout.getMovie(),
+                seatLayout.getTheatre(),
+                seatLayout.getScreen(),
+                seatLayout.getShowDate(),
+                seatLayout.getShowTime(),
+                seatLayout.getTicketPrice(),
+                seatLayout.getAvailableSeats(),
+                seatLayout.getShowStatus(),
+                seats
+        );
     }
 }

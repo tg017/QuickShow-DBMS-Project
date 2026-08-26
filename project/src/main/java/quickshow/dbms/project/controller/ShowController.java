@@ -2,6 +2,7 @@ package quickshow.dbms.project.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import quickshow.dbms.project.dto.SeatLayoutDTO;
 import quickshow.dbms.project.dto.TheatreShowsDTO;
 import quickshow.dbms.project.service.ShowService;
 import quickshow.dbms.project.service.TheatreService;
@@ -29,6 +30,16 @@ public class ShowController {
                         movieId,
                         date
                 )
+        );
+    }
+
+    @GetMapping("/{showId}/seats")
+    public ResponseEntity<SeatLayoutDTO> getSeatLayout(
+            @PathVariable Integer showId
+    ) {
+
+        return ResponseEntity.ok(
+                showService.getSeatLayout(showId)
         );
     }
 }
