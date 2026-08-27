@@ -12,7 +12,6 @@ import quickshow.dbms.project.dto.ShowSummaryDTO;
 import quickshow.dbms.project.dto.TheatreSummaryDTO;
 import quickshow.dbms.project.exception.BookingConflictException;
 import quickshow.dbms.project.exception.ResourceNotFoundException;
-import quickshow.dbms.project.model.BookingStatus;
 import quickshow.dbms.project.model.PaymentMethod;
 import quickshow.dbms.project.model.PaymentStatus;
 import quickshow.dbms.project.payment.PaymentGateway;
@@ -73,7 +72,8 @@ public class BookingService {
 
     @Transactional
     public BookingDetailsDTO checkout(
-            BookingCheckoutRequestDTO request
+            BookingCheckoutRequestDTO request,
+            Integer customerId
     ) {
 
         validateRequest(request);
@@ -84,7 +84,7 @@ public class BookingService {
         // =====================================================
 
         if (!bookingRepository.customerExists(
-                request.getCustomerId()
+                customerId
         )) {
 
             throw new ResourceNotFoundException(
@@ -189,7 +189,7 @@ public class BookingService {
 
         Integer bookingId =
                 bookingRepository.createBooking(
-                        request.getCustomerId(),
+                        customerId,
                         totalAmount,
                         requestedSeatCount
                 );
@@ -299,7 +299,8 @@ public class BookingService {
         // =====================================================
 
         return getBookingDetails(
-                bookingId
+                bookingId,
+                customerId
         );
     }
 
@@ -309,8 +310,9 @@ public class BookingService {
     // =========================================================
 
     public BookingDetailsDTO getBookingDetails(
-            Integer bookingId
-    ) {
+            Integer bookingId,
+            Integer customerId
+    ){
 
         if (bookingId == null) {
 
@@ -321,7 +323,8 @@ public class BookingService {
 
         BookingDetailsData booking =
                 bookingRepository.findBookingDetails(
-                        bookingId
+                        bookingId,
+                        customerId
                 );
 
         if (booking == null) {
@@ -424,12 +427,6 @@ public class BookingService {
         if (request == null) {
             throw new IllegalArgumentException(
                     "Request cannot be null"
-            );
-        }
-
-        if (request.getCustomerId() == null) {
-            throw new IllegalArgumentException(
-                    "Customer ID cannot be null"
             );
         }
 

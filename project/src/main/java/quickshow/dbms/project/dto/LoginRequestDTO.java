@@ -5,18 +5,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BookingCheckoutRequestDTO {
+public class LoginRequestDTO {
 
-
-    private Integer showId;
-
-    private List<Integer> seatIds;
-
-    private String paymentMethod;
+    private String email;
+    private String password;
 }

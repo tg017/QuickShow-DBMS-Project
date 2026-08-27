@@ -5,18 +5,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BookingCheckoutRequestDTO {
+public class RegisterResponseDTO {
 
+    private Integer userId;
 
-    private Integer showId;
+    private String firstName;
 
-    private List<Integer> seatIds;
+    private String lastName;
 
-    private String paymentMethod;
+    private String email;
+
+    private String message;
 }

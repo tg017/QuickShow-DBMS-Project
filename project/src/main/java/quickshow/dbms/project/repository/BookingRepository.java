@@ -221,7 +221,8 @@ public class BookingRepository {
     // =========================================================
 
     public BookingDetailsData findBookingDetails(
-            Integer bookingId
+            Integer bookingId,
+            Integer customerId
     ) {
 
         String sql = """
@@ -264,6 +265,7 @@ public class BookingRepository {
                     ON sc.TheatreID = t.TheatreID
 
                 WHERE b.BookingID = ?
+                  AND b.UserID = ?
 
                 LIMIT 1
                 """;
@@ -295,7 +297,8 @@ public class BookingRepository {
                                         rs.getString("ScreenName"),
                                         rs.getString("ScreenType")
                                 ),
-                        bookingId
+                        bookingId,
+                        customerId
                 );
 
         if (results.isEmpty()) {
