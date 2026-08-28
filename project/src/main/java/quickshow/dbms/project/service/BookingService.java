@@ -12,6 +12,8 @@ import quickshow.dbms.project.dto.ShowSummaryDTO;
 import quickshow.dbms.project.dto.TheatreSummaryDTO;
 import quickshow.dbms.project.exception.BookingConflictException;
 import quickshow.dbms.project.exception.ResourceNotFoundException;
+import quickshow.dbms.project.model.Booking;
+import quickshow.dbms.project.model.BookingStatus;
 import quickshow.dbms.project.model.PaymentMethod;
 import quickshow.dbms.project.model.PaymentStatus;
 import quickshow.dbms.project.payment.PaymentGateway;
@@ -354,6 +356,7 @@ public class BookingService {
             );
         }
 
+
         PaymentData payment =
                 paymentRepository.findPaymentByBookingId(
                         bookingId
@@ -485,5 +488,173 @@ public class BookingService {
                     "Invalid payment method: " + value
             );
         }
+    }
+
+    public List<BookingDetailsDTO> getAllBookingsDetails(Integer userId) {
+
+        List<BookingDetailsData> bookings =
+                bookingRepository.findAllBookingsDetails(userId);
+
+        if (bookings.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No bookings found for user: " + userId
+            );
+        }
+
+        List<BookingDetailsDTO> result = new ArrayList<>();
+
+        for (BookingDetailsData booking : bookings) {
+
+            Integer bookingId = booking.getBookingId();
+
+            // -------------------------
+            // Seats
+            // -------------------------
+
+            List<SelectedSeatData> seatData =
+                    bookedSeatsRepository.findSeatsByBookingId(
+                            bookingId
+                    );
+
+            List<SelectedSeatDTO> seats = new ArrayList<>();
+
+            for (SelectedSeatData seat : seatData) {
+
+                seats.add(
+                        new SelectedSeatDTO(
+                                seat.getSeatId(),
+                                seat.getRowNo(),
+                                seat.getSeatNo()
+                        )
+                );
+            }
+
+            // -------------------------
+            // Payment
+            // -------------------------
+
+            PaymentData payment =
+                    paymentRepository.findPaymentByBookingId(
+                            bookingId
+                    );
+
+            PaymentSummaryDTO paymentDTO = null;
+
+            if (payment != null) {
+
+                paymentDTO =
+                        new PaymentSummaryDTO(
+                                payment.getPaymentId(),
+                                payment.getPaymentMethod(),
+                                payment.getPaymentAmount(),
+                                payment.getPaymentStatus()
+                        );
+            }
+
+            // -------------------------
+            // Show
+            // -------------------------
+
+            ShowSummaryDTO show =
+                    new ShowSummaryDTO(
+                            booking.getShowId(),
+                            booking.getShowDate(),
+                            booking.getShowTime()
+                    );
+
+            // -------------------------
+            // Movie
+            // -------------------------
+
+            MovieBookingSummaryDTO movie =
+                    new MovieBookingSummaryDTO(
+                            booking.getMovieId(),
+                            booking.getMovieTitle()
+                    );
+
+            // -------------------------
+            // Theatre
+            // -------------------------
+
+            TheatreSummaryDTO theatre =
+                    new TheatreSummaryDTO(
+                            booking.getTheatreId(),
+                            booking.getTheatreName(),
+                            booking.getCity()
+                    );
+
+            // -------------------------
+            // Screen
+            // -------------------------
+
+            ScreenSummaryDTO screen =
+                    new ScreenSummaryDTO(
+                            booking.getScreenId(),
+                            booking.getScreenName(),
+                            booking.getScreenType()
+                    );
+
+            // -------------------------
+            // Final Booking DTO
+            // -------------------------
+
+            BookingDetailsDTO bookingDTO =
+                    new BookingDetailsDTO(
+                            booking.getBookingId(),
+                            show,
+                            movie,
+                            theatre,
+                            screen,
+                            seats,
+                            booking.getTotalSeatCount(),
+                            booking.getTotalAmount(),
+                            booking.getBookingStatus(),
+                            paymentDTO
+                    );
+
+            result.add(bookingDTO);
+        }
+
+        return result;
+    }
+
+    @Transactional
+    public void cancelBooking(
+            Integer bookingId,
+            Integer customerId
+    ) {
+
+        Booking booking =
+                bookingRepository.findBookingForCancellation(
+                        bookingId,
+                        customerId
+                );
+
+        if (booking == null) {
+
+            throw new ResourceNotFoundException(
+                    "Booking not found"
+            );
+        }
+
+        if (booking.getBookingStatus()
+                != BookingStatus.CONFIRMED) {
+
+            throw new IllegalStateException(
+                    "Only confirmed bookings can be cancelled"
+            );
+        }
+
+        bookingRepository.releaseSeats(
+                bookingId
+        );
+
+        bookingRepository.updateAvailableSeats(
+                bookingId
+        );
+
+        bookingRepository.cancelBooking(
+                bookingId
+        );
     }
 }

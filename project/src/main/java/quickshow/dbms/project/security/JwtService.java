@@ -82,4 +82,28 @@ public class JwtService {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+
+    public String generateAdminToken(
+            Integer adminId,
+            String email,
+            String role
+    ) {
+
+        Date now = new Date();
+
+        Date expiration =
+                new Date(
+                        now.getTime() + EXPIRATION_TIME
+                );
+
+        return Jwts.builder()
+                .subject(email)
+                .claim("adminId", adminId)
+                .claim("role", role)
+                .claim("accountType", "ADMIN")
+                .issuedAt(now)
+                .expiration(expiration)
+                .signWith(key)
+                .compact();
+    }
 }

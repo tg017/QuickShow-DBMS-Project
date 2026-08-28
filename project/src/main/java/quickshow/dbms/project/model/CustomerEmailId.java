@@ -19,7 +19,7 @@ public class CustomerEmailId implements Serializable {
     @Column(name = "UserID")
     private Integer userId;
 
-    @Column(name = "Email", length = 30)
+    @Column(name = "Email", length = 100)
     private String email;
 
     @Override

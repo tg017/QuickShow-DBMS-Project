@@ -3,6 +3,7 @@ package quickshow.dbms.project.repository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import quickshow.dbms.project.dto.CustomerProfileDTO;
 import quickshow.dbms.project.dto.RegisterRequestDTO;
 import quickshow.dbms.project.repository.data.CustomerLoginData;
 import quickshow.dbms.project.repository.data.CustomerProfileData;
@@ -178,5 +179,48 @@ public class CustomerRepository {
         }
 
         return result.get(0);
+    }
+
+    public CustomerProfileDTO findProfileById(
+            Integer userId
+    ) {
+
+        String sql = """
+                SELECT
+                    c.UserId,
+                    c.FirstName,
+                    c.MiddleName,
+                    c.LastName,
+                    c.DOB,
+                    c.Gender,
+                    c.PhoneNo,
+                    ce.Email,
+                    c.HouseNo,
+                    c.Street,
+                    c.Area,
+                    c.City,
+                    c.State,
+                    c.PinCode
+
+                FROM Customer c
+
+                LEFT JOIN CustomerEmails ce
+                    ON c.UserId = ce.UserID
+
+                WHERE c.UserId = ?
+                """;
+
+        List<CustomerProfileDTO> results =
+                jdbcTemplate.query(
+                        sql,
+                        new CustomerProfileRowMapper(),
+                        userId
+                );
+
+        if (results.isEmpty()) {
+            return null;
+        }
+
+        return results.get(0);
     }
 }

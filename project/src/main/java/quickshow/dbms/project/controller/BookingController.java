@@ -9,6 +9,8 @@ import quickshow.dbms.project.dto.BookingDetailsDTO;
 import quickshow.dbms.project.security.AuthenticatedCustomer;
 import quickshow.dbms.project.service.BookingService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/bookings")
 public class BookingController {
@@ -67,6 +69,43 @@ public class BookingController {
                         bookingId,
                         customer.getUserId()
                 )
+        );
+    }
+
+    @GetMapping()
+    public  ResponseEntity<List<BookingDetailsDTO>> getAllBookings(
+            Authentication authentication
+    ){
+        AuthenticatedCustomer customer = (AuthenticatedCustomer)authentication.getPrincipal();
+
+        return ResponseEntity.ok(
+                bookingService.getAllBookingsDetails(
+                        customer.getUserId()
+                )
+        ) ;
+    }
+
+    // =========================================================
+// CANCEL BOOKING
+// =========================================================
+
+    @PutMapping("/{bookingId}/cancel")
+    public ResponseEntity<String> cancelBooking(
+            @PathVariable Integer bookingId,
+            Authentication authentication
+    ) {
+
+        AuthenticatedCustomer customer =
+                (AuthenticatedCustomer)
+                        authentication.getPrincipal();
+
+        bookingService.cancelBooking(
+                bookingId,
+                customer.getUserId()
+        );
+
+        return ResponseEntity.ok(
+                "Booking cancelled successfully"
         );
     }
 }

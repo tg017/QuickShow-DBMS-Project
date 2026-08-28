@@ -4,6 +4,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import quickshow.dbms.project.model.Booking;
+import quickshow.dbms.project.model.BookingStatus;
 import quickshow.dbms.project.repository.data.BookingDetailsData;
 import quickshow.dbms.project.repository.data.CheckoutShowData;
 
@@ -306,5 +308,208 @@ public class BookingRepository {
         }
 
         return results.get(0);
+    }
+
+
+    public List<BookingDetailsData> findAllBookingsDetails(Integer userId) {
+
+        String sql = """
+            SELECT DISTINCT
+                b.BookingID,
+                b.TotalAmount,
+                b.TotalSeatsCount,
+                b.BookingStatus,
+
+                sh.ShowID,
+                sh.ShowDate,
+                sh.ShowTime,
+
+                m.MovieID,
+                m.Title AS MovieTitle,
+
+                t.TheatreID,
+                t.Name AS TheatreName,
+                t.City,
+
+                sc.ScreenID,
+                sc.ScreenName,
+                sc.ScreenType
+
+            FROM Booking b
+
+            JOIN BookedSeats bs
+                ON b.BookingID = bs.BookingID
+
+            JOIN `Show` sh
+                ON bs.ShowID = sh.ShowID
+
+            JOIN Movie m
+                ON sh.MovieID = m.MovieID
+
+            JOIN Screen sc
+                ON bs.ScreenID = sc.ScreenID
+
+            JOIN Theatre t
+                ON sc.TheatreID = t.TheatreID
+
+            WHERE b.UserID = ?
+
+            ORDER BY b.BookingID DESC
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) ->
+                        new BookingDetailsData(
+                                rs.getInt("BookingID"),
+                                rs.getLong("TotalAmount"),
+                                rs.getInt("TotalSeatsCount"),
+                                rs.getString("BookingStatus"),
+
+                                rs.getInt("ShowID"),
+                                rs.getDate("ShowDate").toLocalDate(),
+                                rs.getTime("ShowTime").toLocalTime(),
+
+                                rs.getInt("MovieID"),
+                                rs.getString("MovieTitle"),
+
+                                rs.getInt("TheatreID"),
+                                rs.getString("TheatreName"),
+                                rs.getString("City"),
+
+                                rs.getInt("ScreenID"),
+                                rs.getString("ScreenName"),
+                                rs.getString("ScreenType")
+                        ),
+                userId
+        );
+    }
+
+    public Booking findBookingForCancellation(
+            Integer bookingId,
+            Integer customerId
+    ) {
+
+        String sql = """
+            SELECT
+                BookingID,
+                UserID,
+                BookingDateTime,
+                BookingStatus,
+                TotalAmount,
+                TotalSeatsCount
+            FROM Booking
+            WHERE BookingID = ?
+              AND UserID = ?
+            """;
+
+        List<Booking> bookings =
+                jdbcTemplate.query(
+                        sql,
+                        (rs, rowNum) -> {
+
+                            Booking booking =
+                                    new Booking();
+
+                            booking.setBookingId(
+                                    rs.getInt("BookingID")
+                            );
+
+                            booking.setBookingDateTime(
+                                    rs.getTimestamp(
+                                            "BookingDateTime"
+                                    ).toLocalDateTime()
+                            );
+
+                            booking.setBookingStatus(
+                                    BookingStatus.valueOf(
+                                            rs.getString(
+                                                    "BookingStatus"
+                                            )
+                                    )
+                            );
+
+                            booking.setTotalAmount(
+                                    rs.getLong("TotalAmount")
+                            );
+
+                            booking.setTotalSeatsCount(
+                                    rs.getInt("TotalSeatsCount")
+                            );
+
+                            return booking;
+                        },
+                        bookingId,
+                        customerId
+                );
+
+        if (bookings.isEmpty()) {
+            return null;
+        }
+
+        return bookings.get(0);
+    }
+
+    public int releaseSeats(
+            Integer bookingId
+    ) {
+
+        String sql = """
+            UPDATE ShowSeatAllocates ssa
+            JOIN BookedSeats bs
+                ON ssa.ShowID = bs.ShowID
+               AND ssa.ScreenID = bs.ScreenID
+               AND ssa.SeatID = bs.SeatID
+            SET ssa.Status = 'AVAILABLE'
+            WHERE bs.BookingID = ?
+              AND ssa.Status = 'BOOKED'
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                bookingId
+        );
+    }
+
+    public int updateAvailableSeats(
+            Integer bookingId
+    ) {
+
+        String sql = """
+            UPDATE `Show` s
+            JOIN (
+                SELECT
+                    bs.ShowID,
+                    COUNT(*) AS SeatCount
+                FROM BookedSeats bs
+                WHERE bs.BookingID = ?
+                GROUP BY bs.ShowID
+            ) x
+                ON s.ShowID = x.ShowID
+            SET s.AvailableSeats =
+                s.AvailableSeats + x.SeatCount
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                bookingId
+        );
+    }
+
+    public int cancelBooking(
+            Integer bookingId
+    ) {
+
+        String sql = """
+            UPDATE Booking
+            SET BookingStatus = 'CANCELLED'
+            WHERE BookingID = ?
+              AND BookingStatus = 'CONFIRMED'
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                bookingId
+        );
     }
 }

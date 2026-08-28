@@ -29,10 +29,8 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-
                 .csrf(csrf -> csrf.disable())
 
-                // JWT authentication is stateless
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
@@ -41,11 +39,23 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
+                        // Authentication
                         .requestMatchers(
+                                "/api/auth/login",
                                 "/api/auth/register",
-                                "/api/auth/login"
+                                "/api/admin/login",
+                                "/api/admin/register"
                         ).permitAll()
 
+                        // Public browsing
+                        .requestMatchers(
+                                "/api/movies/**",
+                                "/api/theatres/**",
+                                "/api/theatre/**",
+                                "/api/shows/**"
+                        ).permitAll()
+
+                        // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
 
