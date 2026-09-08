@@ -4,7 +4,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import quickshow.dbms.project.dto.AdminScreenDTO;
-import quickshow.dbms.project.model.ScreenType;
+import quickshow.dbms.project.dto.SeatRowConfigDTO;
 
 import java.util.List;
 
@@ -13,13 +13,15 @@ public class AdminScreenRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    public AdminScreenRepository(JdbcTemplate jdbcTemplate) {
+    public AdminScreenRepository(
+            JdbcTemplate jdbcTemplate
+    ) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
 
     // =========================================================
-    // GET ALL SCREENS OF A THEATRE
+    // GET ALL SCREENS OF THEATRE
     // =========================================================
 
     public List<AdminScreenDTO> findByTheatreId(
@@ -40,38 +42,7 @@ public class AdminScreenRepository {
 
         return jdbcTemplate.query(
                 sql,
-                (rs, rowNum) -> {
-
-                    AdminScreenDTO screen =
-                            new AdminScreenDTO();
-
-                    screen.setScreenId(
-                            rs.getInt("ScreenID")
-                    );
-
-                    screen.setName(
-                            rs.getString("ScreenName")
-                    );
-
-                    String type =
-                            rs.getString("ScreenType");
-
-                    if (type != null) {
-                        screen.setScreenType(
-                                ScreenType.valueOf(type)
-                        );
-                    }
-
-                    screen.setCapacity(
-                            rs.getInt("SeatingCapacity")
-                    );
-
-                    screen.setTheatreId(
-                            rs.getInt("TheatreID")
-                    );
-
-                    return screen;
-                },
+                new AdminScreenRowMapper(),
                 theatreId
         );
     }
@@ -96,74 +67,18 @@ public class AdminScreenRepository {
                 WHERE ScreenID = ?
                 """;
 
-        List<AdminScreenDTO> screens =
+        List<AdminScreenDTO> result =
                 jdbcTemplate.query(
                         sql,
-                        (rs, rowNum) -> {
-
-                            AdminScreenDTO screen =
-                                    new AdminScreenDTO();
-
-                            screen.setScreenId(
-                                    rs.getInt("ScreenID")
-                            );
-
-                            screen.setName(
-                                    rs.getString("ScreenName")
-                            );
-
-                            String type =
-                                    rs.getString("ScreenType");
-
-                            if (type != null) {
-                                screen.setScreenType(
-                                        ScreenType.valueOf(type)
-                                );
-                            }
-
-                            screen.setCapacity(
-                                    rs.getInt("SeatingCapacity")
-                            );
-
-                            screen.setTheatreId(
-                                    rs.getInt("TheatreID")
-                            );
-
-                            return screen;
-                        },
+                        new AdminScreenRowMapper(),
                         screenId
                 );
 
-        if (screens.isEmpty()) {
+        if (result.isEmpty()) {
             return null;
         }
 
-        return screens.get(0);
-    }
-
-
-    // =========================================================
-    // CHECK SCREEN EXISTS
-    // =========================================================
-
-    public boolean existsById(
-            Integer screenId
-    ) {
-
-        String sql = """
-                SELECT COUNT(*)
-                FROM Screen
-                WHERE ScreenID = ?
-                """;
-
-        Integer count =
-                jdbcTemplate.queryForObject(
-                        sql,
-                        Integer.class,
-                        screenId
-                );
-
-        return count != null && count > 0;
+        return result.get(0);
     }
 
 
@@ -171,7 +86,7 @@ public class AdminScreenRepository {
     // CREATE SCREEN
     // =========================================================
 
-    public Integer create(
+    public Integer createScreen(
             Integer theatreId,
             AdminScreenDTO screen
     ) {
@@ -203,35 +118,106 @@ public class AdminScreenRepository {
 
 
     // =========================================================
-    // UPDATE SCREEN
+    // CREATE SEAT
     // =========================================================
 
-    public int update(
+    public void createSeat(
             Integer screenId,
-            AdminScreenDTO screen
+            Integer seatId,
+            String rowNo,
+            Integer seatNo
     ) {
 
         String sql = """
-                UPDATE Screen
-                SET
-                    ScreenName = ?,
-                    ScreenType = ?,
-                    SeatingCapacity = ?
-                WHERE ScreenID = ?
+                INSERT INTO Seat
+                (
+                    ScreenID,
+                    SeatID,
+                    RowNo,
+                    SeatNo
+                )
+                VALUES (?, ?, ?, ?)
                 """;
 
-        return jdbcTemplate.update(
+        jdbcTemplate.update(
                 sql,
-                screen.getName(),
-                screen.getScreenType().name(),
-                screen.getCapacity(),
-                screenId
+                screenId,
+                seatId,
+                rowNo,
+                seatNo
         );
     }
 
 
     // =========================================================
-    // CHECK SEATS
+    // CREATE ALL SEATS FOR SCREEN
+    // =========================================================
+
+    public void createSeats(
+            Integer screenId,
+            List<SeatRowConfigDTO> rows
+    ) {
+
+        String sql = """
+            INSERT INTO Seat
+            (
+                ScreenID,
+                SeatID,
+                RowNo,
+                SeatNo
+            )
+            VALUES (?, ?, ?, ?)
+            """;
+
+        int seatId = 1;
+
+        for (SeatRowConfigDTO row : rows) {
+
+            for (int seatNo = 1;
+                 seatNo <= row.getSeatCount();
+                 seatNo++) {
+
+                jdbcTemplate.update(
+                        sql,
+                        screenId,
+                        seatId,
+                        row.getRowNo(),
+                        seatNo
+                );
+
+                seatId++;
+            }
+        }
+    }
+
+
+    // =========================================================
+    // EXISTS
+    // =========================================================
+
+    public boolean existsById(
+            Integer screenId
+    ) {
+
+        String sql = """
+                SELECT COUNT(*)
+                FROM Screen
+                WHERE ScreenID = ?
+                """;
+
+        Integer count =
+                jdbcTemplate.queryForObject(
+                        sql,
+                        Integer.class,
+                        screenId
+                );
+
+        return count != null && count > 0;
+    }
+
+
+    // =========================================================
+    // HAS SEATS
     // =========================================================
 
     public boolean hasSeats(
@@ -256,7 +242,7 @@ public class AdminScreenRepository {
 
 
     // =========================================================
-    // CHECK SHOWS
+    // HAS SHOWS
     // =========================================================
 
     public boolean hasShows(
@@ -277,6 +263,34 @@ public class AdminScreenRepository {
                 );
 
         return count != null && count > 0;
+    }
+
+
+    // =========================================================
+    // UPDATE SCREEN
+    // =========================================================
+
+    public int update(
+            Integer screenId,
+            AdminScreenDTO screen
+    ) {
+
+        String sql = """
+                UPDATE Screen
+                SET
+                    ScreenName = ?,
+                    ScreenType = ?,
+                    SeatingCapacity = ?
+                WHERE ScreenID = ?
+                """;
+
+        return jdbcTemplate.update(
+                sql,
+                screen.getName(),
+                screen.getScreenType().name(),
+                screen.getCapacity(),
+                screenId
+        );
     }
 
 

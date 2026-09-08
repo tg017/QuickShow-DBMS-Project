@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import quickshow.dbms.project.dto.*;
 import quickshow.dbms.project.service.AdminScreenService;
 import quickshow.dbms.project.service.AdminService;
+import quickshow.dbms.project.service.AdminShowService;
 import quickshow.dbms.project.service.AdminTheatreService;
 
 import java.util.List;
@@ -18,15 +19,26 @@ public class AdminController {
     private final AdminService adminService;
     private final AdminTheatreService adminTheatreService;
     private final AdminScreenService adminScreenService;
+    private final AdminShowService adminShowService;
 
     public AdminController(
             AdminService adminService,
             AdminTheatreService adminTheatreService,
-            AdminScreenService adminScreenService
+            AdminScreenService adminScreenService,
+            AdminShowService adminShowService
     ) {
-        this.adminService = adminService;
-        this.adminTheatreService = adminTheatreService;
-        this.adminScreenService = adminScreenService;
+
+        this.adminService =
+                adminService;
+
+        this.adminTheatreService =
+                adminTheatreService;
+
+        this.adminScreenService =
+                adminScreenService;
+
+        this.adminShowService =
+                adminShowService;
     }
 
 
@@ -294,6 +306,126 @@ public class AdminController {
 
         return ResponseEntity.ok(
                 "Screen deleted successfully."
+        );
+    }
+
+    // =========================================================
+// SHOWS
+// =========================================================
+
+    @GetMapping("/shows")
+    public ResponseEntity<List<AdminShowDTO>> getAllShows() {
+
+        return ResponseEntity.ok(
+                adminShowService.getAllShows()
+        );
+    }
+
+
+    @GetMapping("/shows/{showId}")
+    public ResponseEntity<AdminShowDTO> getShowById(
+            @PathVariable Integer showId
+    ) {
+
+        AdminShowDTO show =
+                adminShowService.getShowById(
+                        showId
+                );
+
+        if (show == null) {
+
+            return ResponseEntity
+                    .notFound()
+                    .build();
+        }
+
+        return ResponseEntity.ok(show);
+    }
+
+
+    @PostMapping("/shows")
+    public ResponseEntity<AdminShowDTO> createShow(
+            @RequestBody AdminShowDTO show
+    ) {
+
+        AdminShowDTO created =
+                adminShowService.createShow(
+                        show
+                );
+
+        if (created == null) {
+
+            return ResponseEntity
+                    .notFound()
+                    .build();
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(created);
+    }
+
+
+    @PutMapping("/shows/{showId}")
+    public ResponseEntity<AdminShowDTO> updateShow(
+            @PathVariable Integer showId,
+            @RequestBody AdminShowDTO show
+    ) {
+
+        AdminShowDTO updated =
+                adminShowService.updateShow(
+                        showId,
+                        show
+                );
+
+        if (updated == null) {
+
+            return ResponseEntity
+                    .notFound()
+                    .build();
+        }
+
+        return ResponseEntity.ok(updated);
+    }
+
+
+    @DeleteMapping("/shows/{showId}")
+    public ResponseEntity<String> deleteShow(
+            @PathVariable Integer showId
+    ) {
+
+        String result =
+                adminShowService.deleteShow(
+                        showId
+                );
+
+        if ("NOT_FOUND".equals(result)) {
+
+            return ResponseEntity
+                    .notFound()
+                    .build();
+        }
+
+        if ("HAS_BOOKED_SEATS".equals(result)) {
+
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(
+                            "Show cannot be deleted because seats have already been booked."
+                    );
+        }
+
+        if ("HAS_BOOKING_RECORDS".equals(result)) {
+
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(
+                            "Show cannot be deleted because booking records exist for this show."
+                    );
+        }
+
+        return ResponseEntity.ok(
+                "Show deleted successfully."
         );
     }
 }

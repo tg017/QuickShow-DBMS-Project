@@ -105,4 +105,83 @@ public class ShowSeatAllocationRepository {
                 parameters.toArray()
         );
     }
+
+    // =========================================================
+// CREATE ALLOCATIONS FOR SHOW
+// =========================================================
+
+    public int createAllocationsForShow(
+            Integer showId,
+            Integer screenId
+    ) {
+
+        String sql = """
+            INSERT INTO ShowSeatAllocates
+            (
+                ShowID,
+                ScreenID,
+                SeatID,
+                Status
+            )
+            SELECT
+                ?,
+                ScreenID,
+                SeatID,
+                'AVAILABLE'
+            FROM Seat
+            WHERE ScreenID = ?
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                showId,
+                screenId
+        );
+    }
+
+
+// =========================================================
+// COUNT AVAILABLE SEATS
+// =========================================================
+
+    public Integer countAvailableSeats(
+            Integer showId
+    ) {
+
+        String sql = """
+            SELECT COUNT(*)
+            FROM ShowSeatAllocates
+            WHERE ShowID = ?
+              AND Status = 'AVAILABLE'
+            """;
+
+        Integer count =
+                jdbcTemplate.queryForObject(
+                        sql,
+                        Integer.class,
+                        showId
+                );
+
+        return count == null ? 0 : count;
+    }
+
+
+// =========================================================
+// DELETE ALLOCATIONS FOR SHOW
+// =========================================================
+
+    public int deleteAllocationsForShow(
+            Integer showId
+    ) {
+
+        String sql = """
+            DELETE FROM ShowSeatAllocates
+            WHERE ShowID = ?
+            """;
+
+        return jdbcTemplate.update(
+                sql,
+                showId
+        );
+    }
 }

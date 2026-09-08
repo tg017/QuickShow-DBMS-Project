@@ -273,13 +273,12 @@ public class BookingService {
         // 12. UPDATE SHOW AVAILABLE SEATS
         // =====================================================
 
-        int updated =
-                bookingRepository.decreaseAvailableSeats(
-                        request.getShowId(),
-                        requestedSeatCount
+        int updatedRows =
+                bookingRepository.recalculateAvailableSeats(
+                        request.getShowId()
                 );
 
-        if (updated != 1) {
+        if (updatedRows != 1) {
 
             throw new IllegalStateException(
                     "Unable to update available seats"
@@ -637,6 +636,7 @@ public class BookingService {
             );
         }
 
+
         if (booking.getBookingStatus()
                 != BookingStatus.CONFIRMED) {
 
@@ -645,16 +645,72 @@ public class BookingService {
             );
         }
 
-        bookingRepository.releaseSeats(
-                bookingId
-        );
 
-        bookingRepository.updateAvailableSeats(
-                bookingId
-        );
+        // =====================================================
+        // 1. GET SHOW ID
+        // =====================================================
 
-        bookingRepository.cancelBooking(
-                bookingId
-        );
+        Integer showId =
+                bookingRepository.findShowIdByBookingId(
+                        bookingId
+                );
+
+        if (showId == null) {
+
+            throw new IllegalStateException(
+                    "Show not found for booking"
+            );
+        }
+
+
+        // =====================================================
+        // 2. RELEASE SEATS
+        // =====================================================
+
+        int releasedSeats =
+                bookingRepository.releaseSeats(
+                        bookingId
+                );
+
+        if (releasedSeats == 0) {
+
+            throw new IllegalStateException(
+                    "No booked seats found for this booking"
+            );
+        }
+
+
+        // =====================================================
+        // 3. RECALCULATE AVAILABLE SEATS
+        // =====================================================
+
+        int updatedRows =
+                bookingRepository.recalculateAvailableSeats(
+                        showId
+                );
+
+        if (updatedRows != 1) {
+
+            throw new IllegalStateException(
+                    "Unable to update available seats"
+            );
+        }
+
+
+        // =====================================================
+        // 4. CANCEL BOOKING
+        // =====================================================
+
+        int cancelled =
+                bookingRepository.cancelBooking(
+                        bookingId
+                );
+
+        if (cancelled != 1) {
+
+            throw new IllegalStateException(
+                    "Unable to cancel booking"
+            );
+        }
     }
 }

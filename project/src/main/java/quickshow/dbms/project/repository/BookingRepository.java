@@ -59,18 +59,25 @@ public class BookingRepository {
     ) {
 
         String sql = """
-                SELECT
-                    sh.ShowID,
-                    sh.ScreenID,
-                    sh.MovieID,
-                    sh.TicketPrice,
-                    sh.AvailableSeats,
-                    sh.ShowStatus
+        SELECT
+            sh.ShowID,
+            sh.ScreenID,
+            sh.MovieID,
+            sh.TicketPrice,
 
-                FROM `Show` sh
+            (
+                SELECT COUNT(*)
+                FROM ShowSeatAllocates ssa
+                WHERE ssa.ShowID = sh.ShowID
+                  AND ssa.Status = 'AVAILABLE'
+            ) AS AvailableSeats,
 
-                WHERE sh.ShowID = ?
-                """;
+            sh.ShowStatus
+
+        FROM `Show` sh
+
+        WHERE sh.ShowID = ?
+        """;
 
         List<CheckoutShowData> results =
                 jdbcTemplate.query(
@@ -193,29 +200,39 @@ public class BookingRepository {
 
 
     // =========================================================
-    // UPDATE SHOW AVAILABLE SEATS
-    // =========================================================
+// RECALCULATE SHOW AVAILABLE SEATS
+// =========================================================
+//
+// Show.AvailableSeats is derived from ShowSeatAllocates.
+//
+// AVAILABLE allocations = actual available seats.
+//
+// We do NOT increment/decrement AvailableSeats manually.
+// =========================================================
 
-    public int decreaseAvailableSeats(
-            Integer showId,
-            Integer seatCount
+    public int recalculateAvailableSeats(
+            Integer showId
     ) {
 
         String sql = """
-                UPDATE `Show`
-                SET AvailableSeats =
-                    AvailableSeats - ?
+            UPDATE `Show`
+            SET AvailableSeats = (
+                SELECT COUNT(*)
+                FROM ShowSeatAllocates
                 WHERE ShowID = ?
-                  AND AvailableSeats >= ?
-                """;
+                  AND Status = 'AVAILABLE'
+            )
+            WHERE ShowID = ?
+            """;
 
         return jdbcTemplate.update(
                 sql,
-                seatCount,
                 showId,
-                seatCount
+                showId
         );
     }
+
+
 
 
     // =========================================================
@@ -471,31 +488,6 @@ public class BookingRepository {
         );
     }
 
-    public int updateAvailableSeats(
-            Integer bookingId
-    ) {
-
-        String sql = """
-            UPDATE `Show` s
-            JOIN (
-                SELECT
-                    bs.ShowID,
-                    COUNT(*) AS SeatCount
-                FROM BookedSeats bs
-                WHERE bs.BookingID = ?
-                GROUP BY bs.ShowID
-            ) x
-                ON s.ShowID = x.ShowID
-            SET s.AvailableSeats =
-                s.AvailableSeats + x.SeatCount
-            """;
-
-        return jdbcTemplate.update(
-                sql,
-                bookingId
-        );
-    }
-
     public int cancelBooking(
             Integer bookingId
     ) {
@@ -511,5 +503,35 @@ public class BookingRepository {
                 sql,
                 bookingId
         );
+    }
+
+    // =========================================================
+// GET SHOW ID FOR BOOKING
+// =========================================================
+
+    public Integer findShowIdByBookingId(
+            Integer bookingId
+    ) {
+
+        String sql = """
+            SELECT ShowID
+            FROM BookedSeats
+            WHERE BookingID = ?
+            LIMIT 1
+            """;
+
+        List<Integer> result =
+                jdbcTemplate.query(
+                        sql,
+                        (rs, rowNum) ->
+                                rs.getInt("ShowID"),
+                        bookingId
+                );
+
+        if (result.isEmpty()) {
+            return null;
+        }
+
+        return result.get(0);
     }
 }
