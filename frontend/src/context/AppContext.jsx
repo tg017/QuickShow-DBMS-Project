@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { getMe } from '../api/api';
 
 const AppContext = createContext();
 
@@ -33,6 +34,11 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const handleHashChange = () => setCurrentRoute(window.location.hash.slice(1) || 'home');
     window.addEventListener('hashchange', handleHashChange);
+    if (user?.token) {
+      getMe().then(fresh => {
+        if (fresh) setUser(prev => ({ ...prev, ...fresh }));
+      }).catch(() => {});
+    }
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
