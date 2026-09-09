@@ -329,6 +329,13 @@ async function mockFetch(path, options = {}) {
   if (method === 'GET' && path === '/admin/theatres') {
     return [...SEED_THEATRES, ...getCustomTheatres()];
   }
+  if (method === 'GET' && path.match(/^\/admin\/theatres\/(\d+)$/)) {
+    const id = parseInt(path.match(/^\/admin\/theatres\/(\d+)$/)[1]);
+    const all = [...SEED_THEATRES, ...getCustomTheatres()];
+    const th = all.find(t => t.theatreId === id);
+    if (!th) throw new Error('Theatre not found');
+    return th;
+  }
   if (method === 'POST' && path === '/admin/theatres') {
     const data = JSON.parse(options.body);
     const custom = getCustomTheatres();
@@ -336,6 +343,18 @@ async function mockFetch(path, options = {}) {
     custom.push(newTh);
     localStorage.setItem('qs_custom_theatres', JSON.stringify(custom));
     return newTh;
+  }
+  if (method === 'PUT' && path.match(/^\/admin\/theatres\/(\d+)$/)) {
+    const id = parseInt(path.match(/^\/admin\/theatres\/(\d+)$/)[1]);
+    const data = JSON.parse(options.body);
+    const custom = getCustomTheatres();
+    const idx = custom.findIndex(t => t.theatreId === id);
+    if (idx >= 0) {
+      custom[idx] = { ...custom[idx], ...data, theatreId: id };
+      localStorage.setItem('qs_custom_theatres', JSON.stringify(custom));
+      return custom[idx];
+    }
+    return { theatreId: id, ...data };
   }
   if (method === 'DELETE' && path.match(/^\/admin\/theatres\/(\d+)$/)) {
     const id = parseInt(path.match(/^\/admin\/theatres\/(\d+)$/)[1]);
@@ -346,29 +365,207 @@ async function mockFetch(path, options = {}) {
 
   if (method === 'GET' && path.match(/^\/admin\/theatres\/(\d+)\/screens$/)) {
     const tId = parseInt(path.match(/^\/admin\/theatres\/(\d+)\/screens$/)[1]);
+    const stored = JSON.parse(localStorage.getItem('qs_custom_screens_' + tId) || 'null');
+    if (stored) return stored;
     return [
-      { screenId: tId * 3 + 1, name: 'Screen 1 (IMAX)', screenType: 'IMAX' },
-      { screenId: tId * 3 + 2, name: 'Screen 2 (3D)', screenType: '3D' },
-      { screenId: tId * 3 + 3, name: 'Screen 3 (2D)', screenType: '2D' }
+      { screenId: tId * 3 + 1, theatreId: tId, name: 'Screen 1 (IMAX)', screenType: 'IMAX', capacity: 60 },
+      { screenId: tId * 3 + 2, theatreId: tId, name: 'Screen 2 (3D)', screenType: 'THREE_D', capacity: 60 },
+      { screenId: tId * 3 + 3, theatreId: tId, name: 'Screen 3 (2D)', screenType: 'TWO_D', capacity: 60 }
     ];
+  }
+  if (method === 'POST' && path.match(/^\/admin\/theatres\/(\d+)\/screens$/)) {
+    const tId = parseInt(path.match(/^\/admin\/theatres\/(\d+)\/screens$/)[1]);
+    const data = JSON.parse(options.body);
+    const stored = JSON.parse(localStorage.getItem('qs_custom_screens_' + tId) || '[]');
+    const newSc = { screenId: Date.now(), theatreId: tId, ...data };
+    stored.push(newSc);
+    localStorage.setItem('qs_custom_screens_' + tId, JSON.stringify(stored));
+    return newSc;
+  }
+  if (method === 'GET' && path.match(/^\/admin\/screens\/(\d+)$/)) {
+    const scId = parseInt(path.match(/^\/admin\/screens\/(\d+)$/)[1]);
+    return { screenId: scId, name: 'Screen ' + scId, screenType: 'IMAX', capacity: 60 };
+  }
+  if (method === 'PUT' && path.match(/^\/admin\/screens\/(\d+)$/)) {
+    const scId = parseInt(path.match(/^\/admin\/screens\/(\d+)$/)[1]);
+    const data = JSON.parse(options.body);
+    return { screenId: scId, ...data };
+  }
+  if (method === 'DELETE' && path.match(/^\/admin\/screens\/(\d+)$/)) {
+    return 'Screen deleted successfully.';
   }
 
   if (method === 'GET' && path === '/admin/shows') {
     return getShowsForTheatre(1, formatLocalDate(new Date()));
   }
+  if (method === 'GET' && path.match(/^\/admin\/shows\/(\d+)$/)) {
+    const sId = parseInt(path.match(/^\/admin\/shows\/(\d+)$/)[1]);
+    return { showId: sId, movieId: 1, screenId: 1, showDate: formatLocalDate(new Date()), showTime: '18:00', ticketPrice: 250, availableSeats: 60, showStatus: 'SCHEDULED' };
+  }
   if (method === 'POST' && path === '/admin/shows') {
     const data = JSON.parse(options.body);
     return { showId: Date.now(), ...data };
+  }
+  if (method === 'PUT' && path.match(/^\/admin\/shows\/(\d+)$/)) {
+    const sId = parseInt(path.match(/^\/admin\/shows\/(\d+)$/)[1]);
+    const data = JSON.parse(options.body);
+    return { showId: sId, ...data };
   }
   if (method === 'DELETE' && path.match(/^\/admin\/shows\/(\d+)$/)) {
     return 'Show deleted successfully.';
   }
 
+  if (method === 'GET' && path === '/admin/movies') {
+    return [...SEED_MOVIES, ...getCustomMovies()];
+  }
+  if (method === 'GET' && path.match(/^\/admin\/movies\/(\d+)$/)) {
+    const id = parseInt(path.match(/^\/admin\/movies\/(\d+)$/)[1]);
+    const m = [...SEED_MOVIES, ...getCustomMovies()].find(x => x.movieId === id);
+    if (!m) throw new Error('Movie not found');
+    return m;
+  }
+  if (method === 'POST' && path === '/admin/movies') {
+    const data = JSON.parse(options.body);
+    const custom = getCustomMovies();
+    const newM = { movieId: Date.now(), ...data, cast: [] };
+    custom.push(newM);
+    localStorage.setItem('qs_custom_movies', JSON.stringify(custom));
+    return newM;
+  }
+  if (method === 'PUT' && path.match(/^\/admin\/movies\/(\d+)$/)) {
+    const id = parseInt(path.match(/^\/admin\/movies\/(\d+)$/)[1]);
+    const data = JSON.parse(options.body);
+    const custom = getCustomMovies();
+    const idx = custom.findIndex(x => x.movieId === id);
+    if (idx >= 0) {
+      custom[idx] = { ...custom[idx], ...data, movieId: id };
+      localStorage.setItem('qs_custom_movies', JSON.stringify(custom));
+      return custom[idx];
+    }
+    return { movieId: id, ...data };
+  }
+  if (method === 'DELETE' && path.match(/^\/admin\/movies\/(\d+)$/)) {
+    const id = parseInt(path.match(/^\/admin\/movies\/(\d+)$/)[1]);
+    const custom = getCustomMovies().filter(x => x.movieId !== id);
+    localStorage.setItem('qs_custom_movies', JSON.stringify(custom));
+    return 'Movie deleted successfully.';
+  }
+
+  if (method === 'GET' && path.match(/^\/admin\/movies\/(\d+)\/cast$/)) {
+    const mId = parseInt(path.match(/^\/admin\/movies\/(\d+)\/cast$/)[1]);
+    const stored = JSON.parse(localStorage.getItem('qs_cast_' + mId) || 'null');
+    if (stored) return stored;
+    const movie = [...SEED_MOVIES, ...getCustomMovies()].find(x => x.movieId === mId);
+    return (movie?.cast || ['Lead Actor', 'Supporting Actor']).map((a, i) => ({ id: i + 1, actor: typeof a === 'string' ? a : a.actor || 'Actor' }));
+  }
+  if (method === 'POST' && path.match(/^\/admin\/movies\/(\d+)\/cast$/)) {
+    const mId = parseInt(path.match(/^\/admin\/movies\/(\d+)\/cast$/)[1]);
+    const { actor } = JSON.parse(options.body);
+    const stored = JSON.parse(localStorage.getItem('qs_cast_' + mId) || '[]');
+    stored.push({ id: Date.now(), actor });
+    localStorage.setItem('qs_cast_' + mId, JSON.stringify(stored));
+    return 'Actor added successfully.';
+  }
+  if (method === 'DELETE' && path.match(/^\/admin\/movies\/(\d+)\/cast\/(.+)$/)) {
+    const mId = parseInt(path.match(/^\/admin\/movies\/(\d+)\/cast\/(.+)$/)[1]);
+    const actorName = decodeURIComponent(path.match(/^\/admin\/movies\/(\d+)\/cast\/(.+)$/)[2]);
+    const stored = JSON.parse(localStorage.getItem('qs_cast_' + mId) || '[]');
+    const filtered = stored.filter(x => x.actor !== actorName);
+    localStorage.setItem('qs_cast_' + mId, JSON.stringify(filtered));
+    return null;
+  }
+
   if (method === 'GET' && path === '/admin/bookings') {
     return getStoredBookings();
   }
+  if (method === 'GET' && path.startsWith('/admin/bookings/search')) {
+    const url = new URL('http://localhost' + path);
+    const m = url.searchParams.get('movie');
+    const t = url.searchParams.get('theatre');
+    let all = getStoredBookings();
+    if (m) all = all.filter(b => String(b.movieId || b.show?.movieId || '') === String(m));
+    if (t) all = all.filter(b => String(b.theatreId || b.show?.theatreId || '') === String(t));
+    return all;
+  }
 
-  if (method === 'GET' && path.startsWith('/admin/statistics')) {
+  if (method === 'GET' && path === '/admin/payments') {
+    const allB = getStoredBookings();
+    return allB.map((b, i) => ({
+      paymentId: b.payment?.paymentId || (1000 + i),
+      paymentMethod: b.paymentMethod || 'UPI',
+      paymentAmount: b.totalAmount || 250,
+      transactionId: 'TXN-' + (100000 + i),
+      paymentDateTime: new Date().toISOString(),
+      paymentStatus: 'SUCCESS'
+    }));
+  }
+  if (method === 'GET' && path.match(/^\/admin\/payments\/(\d+)$/)) {
+    const pid = parseInt(path.match(/^\/admin\/payments\/(\d+)$/)[1]);
+    return {
+      paymentId: pid,
+      paymentMethod: 'UPI',
+      paymentAmount: 250,
+      transactionId: 'TXN-' + pid,
+      paymentDateTime: new Date().toISOString(),
+      paymentStatus: 'SUCCESS'
+    };
+  }
+  if (method === 'GET' && path.startsWith('/admin/payments/search')) {
+    const url = new URL('http://localhost' + path);
+    const status = url.searchParams.get('paymentStatus');
+    const allB = getStoredBookings();
+    let res = allB.map((b, i) => ({
+      paymentId: b.payment?.paymentId || (1000 + i),
+      paymentMethod: b.paymentMethod || 'UPI',
+      paymentAmount: b.totalAmount || 250,
+      transactionId: 'TXN-' + (100000 + i),
+      paymentDateTime: new Date().toISOString(),
+      paymentStatus: b.bookingStatus === 'CANCELLED' ? 'REFUNDED' : 'SUCCESS'
+    }));
+    if (status) res = res.filter(p => p.paymentStatus.toLowerCase() === status.toLowerCase());
+    return res;
+  }
+
+  if (method === 'GET' && path.startsWith('/admin/statistics/revenue')) {
+    const allB = getStoredBookings();
+    const total = allB.reduce((s, b) => s + (b.totalAmount || 0), 0);
+    return {
+      totalRevenue: total,
+      onlineRevenue: Math.round(total * 0.8),
+      offlineRevenue: Math.round(total * 0.2),
+      ticketSalesCount: allB.length
+    };
+  }
+  if (method === 'GET' && path.startsWith('/admin/statistics/bookings')) {
+    const allB = getStoredBookings();
+    return {
+      totalBookings: allB.length,
+      completedBookings: allB.filter(b => (b.bookingStatus || b.status) === 'CONFIRMED').length,
+      cancelledBookings: allB.filter(b => (b.bookingStatus || b.status) === 'CANCELLED').length,
+      totalTicketsBooked: allB.reduce((s, b) => s + (b.totalSeatCount || b.seats?.length || 1), 0)
+    };
+  }
+  if (method === 'GET' && path.startsWith('/admin/statistics/movies/top')) {
+    const allM = [...SEED_MOVIES, ...getCustomMovies()];
+    return allM.slice(0, 5).map((m, i) => ({
+      movieId: m.movieId,
+      movieTitle: m.title,
+      totalBookings: 120 - i * 15,
+      totalRevenue: (120 - i * 15) * 250
+    }));
+  }
+  if (method === 'GET' && path.startsWith('/admin/statistics/theatres')) {
+    const allT = [...SEED_THEATRES, ...getCustomTheatres()];
+    return allT.map((t, i) => ({
+      theatreId: t.theatreId,
+      theatreName: t.name,
+      city: t.city,
+      totalShows: 24,
+      totalRevenue: 45000 - i * 5000,
+      occupancyRate: 75.5
+    }));
+  }
+  if (method === 'GET' && path.startsWith('/admin/statistics/summary')) {
     const allB = getStoredBookings();
     return {
       totalBookings: allB.length,
@@ -435,17 +632,70 @@ export const adminLogin = (creds) => apiFetch('/admin/login', { method: 'POST', 
 export const adminRegister = (fields) => apiFetch('/admin/register', { method: 'POST', body: JSON.stringify(fields) });
 
 export const adminGetAllTheatres = () => apiFetch('/admin/theatres');
+export const adminGetTheatreById = (id) => apiFetch(`/admin/theatres/${id}`);
 export const adminAddTheatre = (data) => apiFetch('/admin/theatres', { method: 'POST', body: JSON.stringify(data) });
+export const adminUpdateTheatre = (id, data) => apiFetch(`/admin/theatres/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const adminDeleteTheatre = (id) => apiFetch(`/admin/theatres/${id}`, { method: 'DELETE' });
+
 export const adminGetScreensByTheatre = (theatreId) => apiFetch(`/admin/theatres/${theatreId}/screens`);
+export const adminGetScreenById = (id) => apiFetch(`/admin/screens/${id}`);
+export const adminAddScreen = (theatreId, data) => apiFetch(`/admin/theatres/${theatreId}/screens`, { method: 'POST', body: JSON.stringify(data) });
+export const adminUpdateScreen = (id, data) => apiFetch(`/admin/screens/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const adminDeleteScreen = (id) => apiFetch(`/admin/screens/${id}`, { method: 'DELETE' });
 
 export const adminGetAllShows = () => apiFetch('/admin/shows');
+export const adminGetShowById = (id) => apiFetch(`/admin/shows/${id}`);
 export const adminAddShow = (data) => apiFetch('/admin/shows', { method: 'POST', body: JSON.stringify(data) });
+export const adminUpdateShow = (id, data) => apiFetch(`/admin/shows/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const adminDeleteShow = (id) => apiFetch(`/admin/shows/${id}`, { method: 'DELETE' });
 
-export const adminGetAllMovies = () => apiFetch('/movies');
-export const adminGetAllBookings = () => apiFetch('/admin/bookings');
+export const adminGetAllMovies = () => apiFetch('/admin/movies');
+export const adminGetMovieById = (id) => apiFetch(`/admin/movies/${id}`);
+export const adminAddMovie = (data) => apiFetch('/admin/movies', { method: 'POST', body: JSON.stringify(data) });
+export const adminUpdateMovie = (id, data) => apiFetch(`/admin/movies/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const adminDeleteMovie = (id) => apiFetch(`/admin/movies/${id}`, { method: 'DELETE' });
 
-export const adminGetStatsSummary = () => apiFetch('/admin/statistics/summary');
-export const adminGetTopMovies = () => apiFetch('/admin/statistics/movies/top');
-export const adminGetTheatrePerformance = () => apiFetch('/admin/statistics/theatres');
+export const adminGetMovieCast = (movieId) => apiFetch(`/admin/movies/${movieId}/cast`);
+export const adminAddActor = (movieId, data) => apiFetch(`/admin/movies/${movieId}/cast`, { method: 'POST', body: JSON.stringify(data) });
+export const adminDeleteActor = (movieId, actor) => apiFetch(`/admin/movies/${movieId}/cast/${encodeURIComponent(actor)}`, { method: 'DELETE' });
+
+export const adminGetAllBookings = () => apiFetch('/admin/bookings');
+export const adminSearchBookings = (params = {}) => {
+  const q = new URLSearchParams(params);
+  const s = q.toString();
+  return apiFetch(`/admin/bookings/search${s ? `?${s}` : ''}`);
+};
+
+export const adminGetAllPayments = () => apiFetch('/admin/payments');
+export const adminGetPaymentById = (id) => apiFetch(`/admin/payments/${id}`);
+export const adminSearchPayments = (params = {}) => {
+  const q = new URLSearchParams(params);
+  const s = q.toString();
+  return apiFetch(`/admin/payments/search${s ? `?${s}` : ''}`);
+};
+
+export const adminGetStatsSummary = (params = {}) => {
+  const q = new URLSearchParams(params);
+  const s = q.toString();
+  return apiFetch(`/admin/statistics/summary${s ? `?${s}` : ''}`);
+};
+export const adminGetStatsRevenue = (params = {}) => {
+  const q = new URLSearchParams(params);
+  const s = q.toString();
+  return apiFetch(`/admin/statistics/revenue${s ? `?${s}` : ''}`);
+};
+export const adminGetStatsBookings = (params = {}) => {
+  const q = new URLSearchParams(params);
+  const s = q.toString();
+  return apiFetch(`/admin/statistics/bookings${s ? `?${s}` : ''}`);
+};
+export const adminGetTopMovies = (params = {}) => {
+  const q = new URLSearchParams(params);
+  const s = q.toString();
+  return apiFetch(`/admin/statistics/movies/top${s ? `?${s}` : ''}`);
+};
+export const adminGetTheatrePerformance = (params = {}) => {
+  const q = new URLSearchParams(params);
+  const s = q.toString();
+  return apiFetch(`/admin/statistics/theatres${s ? `?${s}` : ''}`);
+};
