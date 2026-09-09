@@ -5,10 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import quickshow.dbms.project.dto.*;
-import quickshow.dbms.project.service.AdminScreenService;
-import quickshow.dbms.project.service.AdminService;
-import quickshow.dbms.project.service.AdminShowService;
-import quickshow.dbms.project.service.AdminTheatreService;
+import quickshow.dbms.project.service.*;
 
 import java.util.List;
 
@@ -20,12 +17,16 @@ public class AdminController {
     private final AdminTheatreService adminTheatreService;
     private final AdminScreenService adminScreenService;
     private final AdminShowService adminShowService;
+    private final AdminPaymentService adminPaymentService;
+    private final AdminBookingService adminBookingService;
 
     public AdminController(
             AdminService adminService,
             AdminTheatreService adminTheatreService,
             AdminScreenService adminScreenService,
-            AdminShowService adminShowService
+            AdminShowService adminShowService,
+            AdminPaymentService adminPaymentService,
+            AdminBookingService adminBookingService
     ) {
 
         this.adminService =
@@ -39,6 +40,12 @@ public class AdminController {
 
         this.adminShowService =
                 adminShowService;
+
+        this.adminPaymentService =
+                adminPaymentService ;
+
+        this.adminBookingService =
+                adminBookingService ;
     }
 
 
@@ -428,4 +435,148 @@ public class AdminController {
                 "Show deleted successfully."
         );
     }
+
+    @GetMapping("/payments")
+    public ResponseEntity<List<AdminPaymentDTO>> getAllPayments() {
+
+        return ResponseEntity.ok(
+                adminPaymentService.getAllPayments()
+        );
+    }
+
+    @GetMapping("/payments/{paymentId}")
+    public ResponseEntity<AdminPaymentDTO> getPaymentById(
+            @PathVariable Integer paymentId
+    ) {
+
+        AdminPaymentDTO payment =
+                adminPaymentService.getPaymentById(
+                        paymentId
+                );
+
+        if (payment == null) {
+
+            return ResponseEntity
+                    .notFound()
+                    .build();
+        }
+
+        return ResponseEntity.ok(payment);
+    }
+
+    @GetMapping("/payments/search")
+    public ResponseEntity<List<AdminPaymentDTO>> searchPayments(
+            @RequestParam(required = false) Integer theatre,
+            @RequestParam(required = false) String paymentStatus
+    ) {
+
+        if (theatre == null &&
+                (paymentStatus == null ||
+                        paymentStatus.isBlank())) {
+
+            return ResponseEntity.ok(
+                    adminPaymentService.getAllPayments()
+            );
+        }
+
+
+        if (theatre != null &&
+                paymentStatus != null &&
+                !paymentStatus.isBlank()) {
+
+            return ResponseEntity.ok(
+                    adminPaymentService
+                            .getPaymentsByTheatreAndStatus(
+                                    theatre,
+                                    paymentStatus
+                            )
+            );
+        }
+
+
+        if (theatre != null) {
+
+            return ResponseEntity.ok(
+                    adminPaymentService
+                            .getPaymentsByTheatre(
+                                    theatre
+                            )
+            );
+        }
+
+
+        return ResponseEntity.ok(
+                adminPaymentService
+                        .getPaymentsByStatus(
+                                paymentStatus
+                        )
+        );
+    }
+
+    @GetMapping("/bookings")
+    public ResponseEntity<List<AdminBookingListDTO>> getAllBookings() {
+
+        return ResponseEntity.ok(
+                adminBookingService.getAllBookings()
+        );
+    }
+
+    @GetMapping("/bookings/search")
+    public ResponseEntity<List<AdminBookingListDTO>> searchBookings(
+
+            @RequestParam(required = false)
+            Integer movie,
+
+            @RequestParam(required = false)
+            Integer theatre
+    ) {
+
+        // No filters
+        if (movie == null &&
+                theatre == null) {
+
+            return ResponseEntity.ok(
+                    adminBookingService.getAllBookings()
+            );
+        }
+
+
+        // Both filters
+        if (movie != null &&
+                theatre != null) {
+
+            return ResponseEntity.ok(
+                    adminBookingService
+                            .getBookingsByMovieAndTheatre(
+                                    movie,
+                                    theatre
+                            )
+            );
+        }
+
+
+        // Movie filter
+        if (movie != null) {
+
+            return ResponseEntity.ok(
+                    adminBookingService
+                            .getBookingsByMovie(
+                                    movie
+                            )
+            );
+        }
+
+
+        // Theatre filter
+        return ResponseEntity.ok(
+                adminBookingService
+                        .getBookingsByTheatre(
+                                theatre
+                        )
+        );
+    }
+
+
+
+
 }

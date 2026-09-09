@@ -14,7 +14,6 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AdminShowDTO {
-
     private Integer showId;
 
     private LocalDate showDate;
