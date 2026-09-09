@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { getTheatres, getTheatreShows } from '../api/api';
+import { getTheatres, searchTheatresByCity, getTheatreShows } from '../api/api';
 import { formatLocalDate } from '../api/data';
 
 export default function Theatres() {
@@ -11,7 +11,8 @@ export default function Theatres() {
 
   useEffect(() => {
     setLoading(true);
-    getTheatres()
+    const fetchTheatres = selectedCity ? searchTheatresByCity(selectedCity).catch(() => getTheatres()) : getTheatres();
+    fetchTheatres
       .then(async (all) => {
         let list = all || [];
         if (selectedCity && list.length > 0) {
