@@ -97,7 +97,7 @@ export function generateShows(movies, screens) {
   return shows;
 }
 
-export function generateSeats(capacity = 60) {
+export function generateSeats(capacity = 60, seed = null) {
   const seats = [];
   const rows = ['A','B','C','D','E','F','G','H'];
   let seatId = 1;
@@ -109,12 +109,15 @@ export function generateSeats(capacity = 60) {
     for (let c = 1; c <= cols; c++) {
       if (added >= capacity) break;
 
-      const status = Math.random() < 0.15 ? 'BOOKED' : 'AVAILABLE';
+      const isBooked = seed != null 
+        ? ((seatId * 17 + seed * 31) % 11 === 0)
+        : Math.random() < 0.15;
+
       seats.push({
         seatId: seatId++,
         rowNo: row,
         seatNo: c,
-        status: status
+        status: isBooked ? 'BOOKED' : 'AVAILABLE'
       });
       added++;
     }
