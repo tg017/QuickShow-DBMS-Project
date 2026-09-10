@@ -62,7 +62,7 @@ export default function SeatLayout({ showId }) {
       }
       setSelectedSeats([
         ...selectedSeats,
-        { id: seat.seatId, name: `${seat.rowNo}-${seat.seatNo}`, price: baseTicketPrice }
+        { id: seat.seatId, name: `${seat.rowNo}${seat.seatNo}`, rowNo: seat.rowNo, seatNo: seat.seatNo, price: baseTicketPrice }
       ]);
     }
   };
