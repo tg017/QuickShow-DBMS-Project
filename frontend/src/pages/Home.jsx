@@ -12,19 +12,39 @@ export default function Home() {
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    setLoading(true);
-    getMovies()
-      .then((data) => {
-        if (data) {
-          setMovies(data);
+    let active = true;
+    const hasFilter = Boolean(searchQuery.trim() || filters.language || filters.genre || filters.rating);
+    const delay = searchQuery ? 300 : 0;
+
+    const timer = setTimeout(async () => {
+      try {
+        if (hasFilter) {
+          const params = {};
+          if (searchQuery.trim()) params.title = searchQuery.trim();
+          if (filters.language) params.language = filters.language;
+          if (filters.genre) params.genre = filters.genre;
+          if (filters.rating) {
+            params.certificate = filters.rating;
+            params.rating = filters.rating;
+          }
+          const results = await searchMovies(params);
+          if (active) setMovies(results || []);
+        } else {
+          const all = await getMovies();
+          if (active && all) setMovies(all);
         }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load movies:', err);
-        setLoading(false);
-      });
-  }, []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }, delay);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, filters.language, filters.genre, filters.rating]);
 
   const carouselMovies = movies.slice(0, 5);
 
@@ -35,23 +55,6 @@ export default function Home() {
     }, 5000);
     return () => clearInterval(timer);
   }, [carouselMovies.length]);
-
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchQuery.trim()) {
-        try {
-          const results = await searchMovies({ title: searchQuery.trim() });
-          setMovies(results || []);
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        const all = await getMovies();
-        if (all) setMovies(all);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   const filteredMovies = movies.filter((m) => {
     if (filters.language && (m.language || '').toLowerCase() !== filters.language.toLowerCase()) {
