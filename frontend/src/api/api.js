@@ -134,13 +134,15 @@ async function mockFetch(path, options = {}) {
   if (method === 'GET' && path.startsWith('/movies/search')) {
     const url = new URL('http://localhost' + path);
     const title = (url.searchParams.get('title') || '').toLowerCase();
-    const lang = url.searchParams.get('language') || '';
-    const genre = url.searchParams.get('genre') || '';
+    const lang = (url.searchParams.get('language') || '').toLowerCase();
+    const genre = (url.searchParams.get('genre') || '').toLowerCase();
+    const cert = (url.searchParams.get('certificate') || url.searchParams.get('rating') || '').toLowerCase();
     const all = [...SEED_MOVIES, ...getCustomMovies()];
     return all.filter(m => 
-      m.title.toLowerCase().includes(title) &&
-      (!lang || m.language === lang) &&
-      (!genre || m.genre.toLowerCase().includes(genre.toLowerCase()))
+      (!title || (m.title || '').toLowerCase().includes(title)) &&
+      (!lang || (m.language || '').toLowerCase() === lang) &&
+      (!genre || (m.genre || '').toLowerCase().includes(genre)) &&
+      (!cert || (m.certificate || '').toLowerCase() === cert)
     );
   }
 
@@ -185,20 +187,34 @@ async function mockFetch(path, options = {}) {
     const allMovies = [...SEED_MOVIES, ...getCustomMovies()];
 
     const tId = Math.floor(showId / 1000) || 1;
+    const mId = Math.floor((showId % 1000) / 10) || 1;
     const theatre = allTheatres.find(t => t.theatreId === tId) || allTheatres[0];
-    const movie = allMovies[0];
+    const movie = allMovies.find(m => m.movieId === mId) || allMovies[0];
+
+    const seatKey = 'qs_seats_' + showId;
+    let showSeats = null;
+    try {
+      showSeats = JSON.parse(localStorage.getItem(seatKey) || 'null');
+    } catch {}
+
+    if (!showSeats || !Array.isArray(showSeats) || showSeats.length === 0) {
+      showSeats = generateSeats(60, showId);
+      try {
+        localStorage.setItem(seatKey, JSON.stringify(showSeats));
+      } catch {}
+    }
 
     return {
       showId,
       movie: { movieId: movie.movieId, title: movie.title, poster: movie.poster },
       theatre: { theatreId: theatre.theatreId, name: theatre.name, city: theatre.city },
-      screen: { screenId: 1, name: 'Screen 1 (IMAX)', screenType: 'IMAX' },
+      screen: { screenId: tId * 3 + 1, name: 'Screen 1 (IMAX)', screenType: 'IMAX' },
       showDate: formatLocalDate(new Date()),
       showTime: '18:00',
       ticketPrice: 250,
-      availableSeats: 60,
+      availableSeats: showSeats.filter(s => s.status !== 'BOOKED').length,
       showStatus: 'SCHEDULED',
-      seats: generateSeats(60)
+      seats: showSeats
     };
   }
 
@@ -243,15 +259,45 @@ async function mockFetch(path, options = {}) {
     const allTheatres = [...SEED_THEATRES, ...getCustomTheatres()];
 
     const tId = Math.floor(showId / 1000) || 1;
+    const mId = Math.floor((showId % 1000) / 10) || 1;
     const theatre = allTheatres.find(t => t.theatreId === tId) || allTheatres[0];
-    const movie = allMovies[0];
+    const movie = allMovies.find(m => m.movieId === mId) || allMovies[0];
+
+    const seatKey = 'qs_seats_' + showId;
+    let showSeats = [];
+    try {
+      showSeats = JSON.parse(localStorage.getItem(seatKey) || '[]');
+    } catch {}
+
+    let bookedSeatObjs = [];
+    if (showSeats.length > 0) {
+      bookedSeatObjs = showSeats
+        .filter(s => (seatIds || []).includes(s.seatId))
+        .map(s => ({ seatId: s.seatId, rowNo: s.rowNo, seatNo: s.seatNo }));
+      showSeats.forEach(s => {
+        if ((seatIds || []).includes(s.seatId)) s.status = 'BOOKED';
+      });
+      try {
+        localStorage.setItem(seatKey, JSON.stringify(showSeats));
+      } catch {}
+    }
+
+    if (bookedSeatObjs.length === 0) {
+      const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+      const cols = 8;
+      bookedSeatObjs = (seatIds || []).map(id => ({
+        seatId: id,
+        rowNo: rows[Math.min(Math.floor((id - 1) / cols), rows.length - 1)] || 'A',
+        seatNo: ((id - 1) % cols) + 1
+      }));
+    }
 
     const booking = {
       bookingId: Math.floor(100000 + Math.random() * 900000),
       userId: user?.userId || 101,
       showId,
       seatIds,
-      totalAmount: seatIds.length * 250,
+      totalAmount: (seatIds || []).length * 250,
       paymentMethod: paymentMethod || 'UPI',
       status: 'CONFIRMED',
       bookingStatus: 'CONFIRMED',
@@ -264,8 +310,8 @@ async function mockFetch(path, options = {}) {
       show: { showId, showDate: formatLocalDate(new Date()), showTime: '18:00' },
       movie: { movieId: movie.movieId, title: movie.title, poster: movie.poster },
       theatre: { theatreId: theatre.theatreId, name: theatre.name, city: theatre.city },
-      screen: { screenId: 1, name: 'Screen 1', screenType: 'IMAX' },
-      seats: (seatIds || []).map((id, i) => ({ seatId: id, rowNo: 'A', seatNo: i + 1 })),
+      screen: { screenId: tId * 3 + 1, name: 'Screen 1', screenType: 'IMAX' },
+      seats: bookedSeatObjs,
       totalSeatCount: (seatIds || []).length,
       payment: { paymentId: Date.now(), paymentMethod: paymentMethod || 'UPI', paymentAmount: (seatIds || []).length * 250, paymentStatus: 'SUCCESS' }
     };
@@ -308,6 +354,18 @@ async function mockFetch(path, options = {}) {
       found.status = 'CANCELLED';
       found.bookingStatus = 'CANCELLED';
       saveStoredBookings(all);
+      if (found.showId && found.seatIds) {
+        const seatKey = 'qs_seats_' + found.showId;
+        try {
+          const showSeats = JSON.parse(localStorage.getItem(seatKey) || '[]');
+          if (showSeats.length > 0) {
+            showSeats.forEach(s => {
+              if (found.seatIds.includes(s.seatId)) s.status = 'AVAILABLE';
+            });
+            localStorage.setItem(seatKey, JSON.stringify(showSeats));
+          }
+        } catch {}
+      }
     }
     return 'Booking cancelled successfully';
   }
@@ -605,9 +663,15 @@ async function apiFetch(path, options = {}) {
 }
 
 export const getMovies = () => apiFetch('/movies');
-export const searchMovies = (query) => {
-  const params = new URLSearchParams(query);
-  return apiFetch(`/movies/search?${params.toString()}`);
+export const searchMovies = (query = {}) => {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([k, v]) => {
+    if (v != null && String(v).trim() !== '') {
+      params.append(k, String(v).trim());
+    }
+  });
+  const qs = params.toString();
+  return apiFetch(`/movies/search${qs ? `?${qs}` : ''}`);
 };
 export const getMovieById = (id) => apiFetch(`/movies/${id}`);
 
