@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { getMovieById, getShowsByMovie } from '../api/api';
+import { getMovieById, getShowsByMovie, getTheatres } from '../api/api';
 import { formatLocalDate } from '../api/data';
 
 export default function MovieDetail({ movieId }) {
@@ -8,10 +8,19 @@ export default function MovieDetail({ movieId }) {
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDayOffset, setSelectedDayOffset] = useState(0);
+  const [theatres, setTheatres] = useState([]);
   const [theatreShows, setTheatreShows] = useState([]);
   const [selectedTheatreId, setSelectedTheatreId] = useState(null);
   const [selectedScreenType, setSelectedScreenType] = useState(null);
   const [showsLoading, setShowsLoading] = useState(false);
+
+  useEffect(() => {
+    getTheatres()
+      .then((data) => {
+        if (data) setTheatres(data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -32,6 +41,12 @@ export default function MovieDetail({ movieId }) {
     return d;
   };
 
+  const resolveCity = (g) => {
+    if (g.city) return g.city;
+    const match = theatres.find((t) => t.theatreId === g.theatreId);
+    return match?.city || '';
+  };
+
   useEffect(() => {
     if (!movieId) return;
     setShowsLoading(true);
@@ -42,9 +57,9 @@ export default function MovieDetail({ movieId }) {
         let list = shows || [];
 
         if (selectedCity && list.length > 0) {
-          const cityTheatres = list.filter(g => (g.city || '').toLowerCase() === selectedCity.toLowerCase());
+          const cityTheatres = list.filter(g => resolveCity(g).toLowerCase() === selectedCity.toLowerCase());
           if (cityTheatres.length > 0) {
-            list = [...cityTheatres, ...list.filter(g => (g.city || '').toLowerCase() !== selectedCity.toLowerCase())];
+            list = [...cityTheatres, ...list.filter(g => resolveCity(g).toLowerCase() !== selectedCity.toLowerCase())];
           }
         }
 
@@ -65,7 +80,7 @@ export default function MovieDetail({ movieId }) {
         setTheatreShows([]);
         setShowsLoading(false);
       });
-  }, [movieId, selectedDayOffset, selectedCity]);
+  }, [movieId, selectedDayOffset, selectedCity, theatres]);
 
   const handleTheatreChange = (tId) => {
     setSelectedTheatreId(tId);
@@ -175,11 +190,14 @@ export default function MovieDetail({ movieId }) {
               value={selectedTheatreId || ''}
               onChange={(e) => handleTheatreChange(parseInt(e.target.value))}
             >
-              {theatreShows.map((g) => (
-                <option key={g.theatreId} value={g.theatreId}>
-                  {g.theatreName} {g.city ? `(${g.city})` : ''}
-                </option>
-              ))}
+              {theatreShows.map((g) => {
+                const c = resolveCity(g);
+                return (
+                  <option key={g.theatreId} value={g.theatreId}>
+                    {g.theatreName} {c ? `(${c})` : ''}
+                  </option>
+                );
+              })}
             </select>
 
             {screenTypes.length > 0 && (
