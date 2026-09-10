@@ -128,7 +128,6 @@ export default function AuthModal() {
             </form>
           ) : (
             <form className="auth-modal__form" onSubmit={handleRegister}>
-              {/* Name row */}
               <div className="auth-modal__row">
                 <div className="auth-modal__group">
                   <label className="auth-modal__label">First Name *</label>
@@ -142,14 +141,12 @@ export default function AuthModal() {
                 </div>
               </div>
 
-              {/* Email */}
               <div className="auth-modal__group">
                 <label className="auth-modal__label">Email Address *</label>
                 <input type="email" className="auth-modal__input" placeholder="name@example.com"
                   value={regData.email} onChange={(e) => setRegData({ ...regData, email: e.target.value })} required />
               </div>
 
-              {/* Password + Phone */}
               <div className="auth-modal__row">
                 <div className="auth-modal__group">
                   <label className="auth-modal__label">Password *</label>
@@ -163,7 +160,6 @@ export default function AuthModal() {
                 </div>
               </div>
 
-              {/* DOB + Gender */}
               <div className="auth-modal__row">
                 <div className="auth-modal__group">
                   <label className="auth-modal__label">Date of Birth *</label>
@@ -181,7 +177,6 @@ export default function AuthModal() {
                 </div>
               </div>
 
-              {/* Address */}
               <div className="auth-modal__row">
                 <div className="auth-modal__group">
                   <label className="auth-modal__label">House No *</label>
