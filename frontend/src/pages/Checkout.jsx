@@ -36,8 +36,8 @@ export default function Checkout() {
     setLoading(true);
     try {
       const result = await checkout({
-        showId: checkoutData.showId,
-        seatIds: checkoutData.seatIds,
+        showId: parseInt(checkoutData.showId, 10),
+        seatIds: (checkoutData.seatIds || []).map((id) => parseInt(id, 10)),
         paymentMethod: selectedMethod
       });
       sessionStorage.removeItem('qs_checkout');
