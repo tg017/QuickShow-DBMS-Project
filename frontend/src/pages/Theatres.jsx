@@ -4,30 +4,28 @@ import { getTheatres, searchTheatresByCity, getTheatreShows } from '../api/api';
 import { formatLocalDate } from '../api/data';
 
 export default function Theatres() {
-  const { selectedCity, navigateTo } = useApp();
+  const { selectedCity, selectedDate, navigateTo } = useApp();
   const [theatres, setTheatres] = useState([]);
   const [theatreShows, setTheatreShows] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    const fetchTheatres = selectedCity ? searchTheatresByCity(selectedCity).catch(() => getTheatres()) : getTheatres();
+    const fetchTheatres = selectedCity && selectedCity.trim()
+      ? searchTheatresByCity(selectedCity.trim()).catch(() => [])
+      : getTheatres().catch(() => []);
     fetchTheatres
       .then(async (all) => {
-        let list = all || [];
-        if (selectedCity && list.length > 0) {
-          const filtered = list.filter((t) => (t.city || '').toLowerCase() === selectedCity.toLowerCase());
-          list = filtered.length > 0 ? filtered : list;
-        }
+        const list = Array.isArray(all) ? all : [];
         setTheatres(list);
         setLoading(false);
 
-        const today = formatLocalDate(new Date());
+        const targetDate = selectedDate || formatLocalDate(new Date());
         const showsMap = {};
         for (const theatre of list) {
           const tid = theatre.theatreId || theatre.id;
           try {
-            const shows = await getTheatreShows(tid, today);
+            const shows = await getTheatreShows(tid, targetDate);
             showsMap[tid] = shows || [];
           } catch {
             showsMap[tid] = [];
@@ -40,7 +38,7 @@ export default function Theatres() {
         setTheatres([]);
         setLoading(false);
       });
-  }, [selectedCity]);
+  }, [selectedCity, selectedDate]);
 
   if (loading) {
     return <div className="spinner" style={{ margin: '60px auto' }}></div>;
