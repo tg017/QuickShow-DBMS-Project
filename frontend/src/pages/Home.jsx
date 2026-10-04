@@ -25,7 +25,6 @@ export default function Home() {
           if (filters.genre) params.genre = filters.genre;
           if (filters.rating) {
             params.certificate = filters.rating;
-            params.rating = filters.rating;
           }
           const results = await searchMovies(params);
           if (active) setMovies(results || []);
@@ -57,13 +56,13 @@ export default function Home() {
   }, [carouselMovies.length]);
 
   const filteredMovies = movies.filter((m) => {
-    if (filters.language && (m.language || '').toLowerCase() !== filters.language.toLowerCase()) {
+    if (filters.language && m.language && m.language.toLowerCase() !== filters.language.toLowerCase()) {
       return false;
     }
-    if (filters.genre && !(m.genre || '').toLowerCase().includes(filters.genre.toLowerCase())) {
+    if (filters.genre && m.genre && !m.genre.toLowerCase().includes(filters.genre.toLowerCase())) {
       return false;
     }
-    if (filters.rating && (m.certificate || '').toLowerCase() !== filters.rating.toLowerCase()) {
+    if (filters.rating && m.certificate && m.certificate.toLowerCase() !== filters.rating.toLowerCase()) {
       return false;
     }
     return true;
