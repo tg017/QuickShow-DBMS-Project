@@ -2,6 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { getMovies, searchMovies } from '../api/api';
 
+const formatCertificate = (cert) => {
+  if (!cert) return '';
+  return cert
+    .replace('UA_16_PLUS', 'UA 16+')
+    .replace('UA_7_PLUS', 'UA 7+')
+    .replace('UA_13_PLUS', 'UA 13+')
+    .replace('UA_18_PLUS', 'A')
+    .replace('U_A', 'UA')
+    .replace(/_/g, ' ');
+};
+
 export default function Home() {
   const { filters, setFilters, navigateTo, showToast } = useApp();
   const [movies, setMovies] = useState([]);
@@ -95,9 +106,9 @@ export default function Home() {
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input 
-          className="search-bar__input" 
-          placeholder="Search Movies, Theatres, Genres..." 
+        <input
+          className="search-bar__input"
+          placeholder="Search Movies, Theatres, Genres..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -107,13 +118,13 @@ export default function Home() {
 
       {carouselMovies.length > 0 && (
         <div className="hero-carousel">
-          <div 
+          <div
             className="hero-carousel__track"
             style={{ transform: `translateX(-${activeSlide * 100}%)`, transition: 'transform 0.5s ease-in-out' }}
           >
             {carouselMovies.map((m, idx) => (
-              <div 
-                key={m.movieId} 
+              <div
+                key={m.movieId}
                 className={`hero-carousel__slide ${idx === activeSlide ? 'hero-carousel__slide--active' : ''}`}
                 onClick={() => navigateTo(`movie/${m.movieId}`)}
                 style={{ cursor: 'pointer' }}
@@ -127,13 +138,13 @@ export default function Home() {
             ))}
           </div>
 
-          <button 
+          <button
             className="hero-carousel__arrow hero-carousel__arrow--prev"
             onClick={() => setActiveSlide((prev) => (prev - 1 + carouselMovies.length) % carouselMovies.length)}
           >
             ‹
           </button>
-          <button 
+          <button
             className="hero-carousel__arrow hero-carousel__arrow--next"
             onClick={() => setActiveSlide((prev) => (prev + 1) % carouselMovies.length)}
           >
@@ -142,8 +153,8 @@ export default function Home() {
 
           <div className="hero-carousel__dots">
             {carouselMovies.map((_, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className={`hero-carousel__dot ${idx === activeSlide ? 'hero-carousel__dot--active' : ''}`}
                 onClick={() => setActiveSlide(idx)}
               />
@@ -168,8 +179,8 @@ export default function Home() {
             <div style={{ padding: '24px', color: 'var(--text-secondary)' }}>
               <p>No movies match the selected filters.</p>
               {(filters.language || filters.genre || filters.rating) && (
-                <button 
-                  className="add-btn" 
+                <button
+                  className="add-btn"
                   style={{ marginTop: '12px' }}
                   onClick={() => setFilters({ language: '', genre: '', rating: '' })}
                 >
@@ -181,14 +192,24 @@ export default function Home() {
             filteredMovies.map((m) => (
               <div key={m.movieId} className="movie-card">
                 <div className="movie-card__poster-wrap">
-                  <img 
-                    className="movie-card__poster" 
-                    src={m.poster || m.posterUrl || 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'} 
-                    alt={m.title} 
+                  <img
+                    className="movie-card__poster"
+                    src={m.poster || m.posterUrl || 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'}
+                    alt={m.title}
                     onError={(e) => { e.target.src = 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'; }}
                   />
                   <div className="movie-card__badge">IMDb</div>
-                  <div 
+                  {m.certificate && (
+                    <div style={{
+                      position: 'absolute', top: '8px', left: '8px',
+                      background: 'rgba(0,0,0,0.7)', color: '#fff',
+                      fontSize: '10px', fontWeight: 700, padding: '2px 6px',
+                      borderRadius: '4px', letterSpacing: '0.03em',
+                    }}>
+                      {formatCertificate(m.certificate)}
+                    </div>
+                  )}
+                  <div
                     className={`movie-card__fav ${favorites[m.movieId] ? 'active' : ''}`}
                     style={{ color: favorites[m.movieId] ? '#00E5FF' : '' }}
                     onClick={(e) => toggleFav(e, m.movieId)}
@@ -205,9 +226,12 @@ export default function Home() {
                     <span className="movie-card__rating-value">{m.imdbRating ? `${m.imdbRating}/10 IMDb` : 'Not Rated'}</span>
                   </div>
                   <div className="movie-card__genres">{m.genre || 'Action, Drama'}</div>
-                  <button 
+                  <button
                     className="movie-card__book-btn"
-                    onClick={() => navigateTo(`movie/${m.movieId}`)}
+                    onClick={() => {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      navigateTo(`movie/${m.movieId}`);
+                    }}
                   >
                     BOOK TICKETS
                   </button>
