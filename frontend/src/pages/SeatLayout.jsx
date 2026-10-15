@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getShowSeats } from '../api/api';
 
+const formatScreenType = (st) => {
+  if (!st) return '2D';
+  return st
+    .replace('TWO_D', '2D')
+    .replace('THREE_D', '3D')
+    .replace('IMAX_3D', 'IMAX 3D')
+    .replace('IMAX_2D', 'IMAX 2D')
+    .replace('FOUR_DX', '4DX')
+    .replace(/_/g, ' ');
+};
+
 export default function SeatLayout({ showId }) {
   const { navigateTo, showToast } = useApp();
   const [layout, setLayout] = useState(null);
@@ -91,13 +102,23 @@ export default function SeatLayout({ showId }) {
     navigateTo('payment');
   };
 
+  const screenTypeLabel = formatScreenType(layout.screen?.screenType || layout.screenType);
+
   return (
     <div className="seat-page">
 
       <div className="seat-page__header">
         <div className="seat-page__movie-title">{layout.movie?.title || 'Movie'}</div>
         <div className="seat-page__show-info">
-          {layout.theatre?.name || 'Galaxy Cinema'} · {layout.screen?.name || 'Screen 1'} · {layout.showDate || ''} · {layout.showTime || ''}
+          {layout.theatre?.name || 'Galaxy Cinema'}
+          {' · '}
+          {layout.screen?.name || 'Screen 1'}
+          {' · '}
+          {screenTypeLabel}
+          {' · '}
+          {layout.showDate || ''}
+          {' · '}
+          {layout.showTime || ''}
         </div>
       </div>
 
@@ -175,7 +196,7 @@ export default function SeatLayout({ showId }) {
           {selectedSeats.map((seat) => (
             <span key={seat.id} className="seat-summary__seat-tag">
               {seat.name}{' '}
-              <button 
+              <button
                 className="remove-seat-btn"
                 onClick={() => removeSeat(seat.id)}
                 title="Remove seat"
@@ -191,7 +212,7 @@ export default function SeatLayout({ showId }) {
           <span className="seat-summary__total-value">₹{totalAmount}</span>
         </div>
 
-        <button 
+        <button
           className="seat-summary__proceed"
           disabled={selectedSeats.length === 0}
           onClick={handleProceed}
