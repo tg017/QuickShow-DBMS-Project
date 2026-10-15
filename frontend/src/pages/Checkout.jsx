@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { checkout } from '../api/api';
-
+const formatScreenType = (st) => {
+  if (!st) return '2D';
+  return st
+    .replace('TWO_D', '2D')
+    .replace('THREE_D', '3D')
+    .replace('IMAX_3D', 'IMAX 3D')
+    .replace('IMAX_2D', 'IMAX 2D')
+    .replace('FOUR_DX', '4DX')
+    .replace(/_/g, ' ');
+};
 export default function Checkout() {
   const { user, setAuthModalOpen, setAuthTab, navigateTo, showToast } = useApp();
   const [selectedMethod, setSelectedMethod] = useState('UPI');
@@ -24,7 +33,7 @@ export default function Checkout() {
   const checkoutData = JSON.parse(checkoutDataStr);
   const seatNames = checkoutData.selectedSeats?.join(', ') || checkoutData.seatIds?.join(', ') || 'N/A';
   const totalAmount = checkoutData.totalAmount || (checkoutData.seatIds?.length || 0) * (checkoutData.ticketPrice || 0);
-
+  const screenType = formatScreenType(checkoutData.screen?.screenType || checkoutData.screenType);
   const handlePay = async () => {
     if (!user) {
       setAuthTab('login');
@@ -44,7 +53,13 @@ export default function Checkout() {
       showToast('Booking confirmed!', 'success');
       navigateTo(`booking/${result.bookingId}/confirmation`);
     } catch (err) {
-      showToast(err.message || 'Payment failed', 'error');
+      if (err.message && (err.message.includes('expired') || err.message.includes('sign in') || err.message.includes('403'))) {
+        setAuthTab('login');
+        setAuthModalOpen(true);
+        showToast('Session expired. Please sign in again to book.', 'warning');
+      } else {
+        showToast(err.message || 'Payment failed', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -58,7 +73,7 @@ export default function Checkout() {
       <div className="payment-view__summary">
         <div className="payment-view__summary-row">
           <span>Movie</span>
-          <span>{checkoutData.movie?.title || 'N/A'}</span>
+          <span>{checkoutData.movie?.title || 'N/A'} {' '}  {'   ('} {screenType} {') '}</span>
         </div>
         <div className="payment-view__summary-row">
           <span>Theatre</span>
