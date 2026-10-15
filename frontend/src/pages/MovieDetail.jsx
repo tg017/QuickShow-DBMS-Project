@@ -3,6 +3,28 @@ import { useApp } from '../context/AppContext';
 import { getMovieById, getShowsByMovie, getTheatres } from '../api/api';
 import { formatLocalDate } from '../api/data';
 
+const formatScreenType = (st) => {
+  if (!st) return '2D';
+  return st
+    .replace('TWO_D', '2D')
+    .replace('THREE_D', '3D')
+    .replace('IMAX_3D', 'IMAX 3D')
+    .replace('IMAX_2D', 'IMAX 2D')
+    .replace('FOUR_DX', '4DX')
+    .replace(/_/g, ' ');
+};
+
+const formatCertificate = (cert) => {
+  if (!cert) return '-';
+  return cert
+    .replace('UA_16_PLUS', 'UA 16+')
+    .replace('UA_7_PLUS', 'UA 7+')
+    .replace('UA_13_PLUS', 'UA 13+')
+    .replace('UA_18_PLUS', 'A')
+    .replace('U_A', 'UA')
+    .replace(/_/g, ' ');
+};
+
 export default function MovieDetail({ movieId }) {
   const { selectedCity, navigateTo } = useApp();
   const [movie, setMovie] = useState(null);
@@ -121,18 +143,18 @@ export default function MovieDetail({ movieId }) {
   const activeGroup = theatreShows.find((g) => g.theatreId === selectedTheatreId) || theatreShows[0];
   const groupShows = activeGroup?.shows || [];
   const screenTypes = [...new Set(groupShows.map((s) => s.screenType).filter(Boolean))];
-  const filteredShows = selectedScreenType 
-    ? groupShows.filter((s) => s.screenType === selectedScreenType) 
+  const filteredShows = selectedScreenType
+    ? groupShows.filter((s) => s.screenType === selectedScreenType)
     : groupShows;
 
   return (
     <div>
 
       <div className="movie-detail">
-        <img 
-          className="movie-detail__poster" 
-          src={movie.poster || movie.posterUrl || 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'} 
-          alt={movie.title || ''} 
+        <img
+          className="movie-detail__poster"
+          src={movie.poster || movie.posterUrl || 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'}
+          alt={movie.title || ''}
           onError={(e) => { e.target.src = 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'; }}
         />
         <div className="movie-detail__content">
@@ -142,7 +164,7 @@ export default function MovieDetail({ movieId }) {
             <span className="movie-detail__meta-label">IMDb Rating</span>
             <span className="movie-detail__meta-value movie-detail__meta-value--rating">★ {movie.imdbRating || '-'}</span>
             <span className="movie-detail__meta-label">Certificate</span>
-            <span className="movie-detail__meta-value">{movie.certificate || '-'}</span>
+            <span className="movie-detail__meta-value">{formatCertificate(movie.certificate)}</span>
             <span className="movie-detail__meta-label">Language</span>
             <span className="movie-detail__meta-value">{movie.language || '-'}</span>
             <span className="movie-detail__meta-label">Genre</span>
@@ -170,7 +192,7 @@ export default function MovieDetail({ movieId }) {
             const dayName = d.toLocaleDateString(undefined, { weekday: 'short' });
             const dateNum = d.getDate();
             return (
-              <div 
+              <div
                 key={offset}
                 className={`date-strip__item ${offset === selectedDayOffset ? 'date-strip__item--active' : ''}`}
                 onClick={() => setSelectedDayOffset(offset)}
@@ -185,7 +207,7 @@ export default function MovieDetail({ movieId }) {
 
         {theatreShows.length > 0 && (
           <div className="shows-section__filters">
-            <select 
+            <select
               className="shows-section__theatre-select"
               value={selectedTheatreId || ''}
               onChange={(e) => handleTheatreChange(parseInt(e.target.value))}
@@ -203,12 +225,12 @@ export default function MovieDetail({ movieId }) {
             {screenTypes.length > 0 && (
               <div className="shows-section__screen-tabs">
                 {screenTypes.map((st) => (
-                  <button 
+                  <button
                     key={st}
                     className={`shows-section__screen-tab ${st === selectedScreenType ? 'shows-section__screen-tab--active' : ''}`}
                     onClick={() => setSelectedScreenType(st)}
                   >
-                    {st}
+                    {formatScreenType(st)}
                   </button>
                 ))}
               </div>
@@ -234,11 +256,14 @@ export default function MovieDetail({ movieId }) {
             filteredShows.map((show) => (
               <div key={show.showId} className="shows-table__row">
                 <div className="shows-table__time">{show.showTime ? show.showTime.slice(0, 5) : '-'}</div>
-                <div className="shows-table__type">{show.screenType || '2D'}</div>
+                <div className="shows-table__type">{formatScreenType(show.screenType)}</div>
                 <div className="shows-table__price">₹{show.ticketPrice || '250'}</div>
-                <button 
+                <button
                   className="shows-table__book-btn"
-                  onClick={() => navigateTo(`shows/${show.showId}/seats`)}
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    navigateTo(`shows/${show.showId}/seats`);
+                  }}
                 >
                   Book Now
                 </button>
