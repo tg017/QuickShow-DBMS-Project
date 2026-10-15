@@ -20,7 +20,9 @@ async function apiFetch(path, options = {}) {
 
   if (!res.ok) {
     let errorMsg = `Request failed with status ${res.status}`;
-    if (contentType.includes('application/json')) {
+    if (res.status === 401 || res.status === 403) {
+      errorMsg = 'Your session has expired or you are not signed in. Please sign in to continue.';
+    } else if (contentType.includes('application/json')) {
       try {
         const err = await res.json();
         errorMsg = err.message || err.error || errorMsg;
