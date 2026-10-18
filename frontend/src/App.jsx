@@ -33,13 +33,11 @@ function MainLayout() {
       return <MovieDetail movieId={id} />;
     }
 
-    // Seat Layout: #shows/:id/seats
     if (currentRoute.match(/^shows\/(.*)\/seats/)) {
       const id = currentRoute.split('/')[1];
       return <SeatLayout showId={id} />;
     }
 
-    // Payment / Checkout: #payment
     if (currentRoute === 'payment') {
       return <Checkout />;
     }
@@ -49,7 +47,6 @@ function MainLayout() {
       return <Confirmation bookingId={id} />;
     }
 
-    // My Bookings: #bookings
     if (currentRoute === 'bookings') {
       return <Bookings />;
     }
@@ -58,7 +55,7 @@ function MainLayout() {
       return <Profile />;
     }
 
-    if (currentRoute === 'theatres' || currentRoute === 'showtimes') {
+    if (currentRoute === 'theatres') {
       return <Theatres />;
     }
 
