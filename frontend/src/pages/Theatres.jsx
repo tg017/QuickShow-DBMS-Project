@@ -3,6 +3,17 @@ import { useApp } from '../context/AppContext';
 import { getTheatres, searchTheatresByCity, getTheatreShows } from '../api/api';
 import { formatLocalDate } from '../api/data';
 
+const formatScreenType = (st) => {
+  if (!st) return '2D';
+  return st
+    .replace('TWO_D', '2D')
+    .replace('THREE_D', '3D')
+    .replace('IMAX_3D', 'IMAX 3D')
+    .replace('IMAX_2D', 'IMAX 2D')
+    .replace('FOUR_DX', '4DX')
+    .replace(/_/g, ' ');
+};
+
 export default function Theatres() {
   const { selectedCity, selectedDate, navigateTo } = useApp();
   const [theatres, setTheatres] = useState([]);
@@ -80,7 +91,7 @@ export default function Theatres() {
                   ) : (
                     shows.map((s) => {
                       const sid = s.showId || s.id;
-                      const screenType = s.screen?.screenType || s.screenType || '2D';
+                      const screenType = formatScreenType(s.screen?.screenType || s.screenType);
                       const timeStr = s.showTime ? s.showTime.slice(0, 5) : '18:00';
                       return (
                         <button
