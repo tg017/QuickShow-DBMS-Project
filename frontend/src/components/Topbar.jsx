@@ -10,7 +10,6 @@ export default function Topbar() {
     { label: 'HOME', route: 'home' },
     { label: 'MOVIES', route: 'movies' },
     { label: 'THEATRES', route: 'theatres' },
-    { label: 'SHOWTIMES', route: 'showtimes' },
     { label: 'PROFILE', route: 'profile' },
   ];
 
