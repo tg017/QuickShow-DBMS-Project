@@ -12,7 +12,6 @@
   --accent-dark: #00B8D4;
   --accent-light: #67EFFF;
   --primary: #00E5FF;
-  --error: #EF4444;
   --accent-glow: 0 0 20px rgba(0,229,255,0.35);
   --accent-bg: rgba(0,229,255,0.08);
   --accent-border: rgba(0,229,255,0.3);
@@ -20,6 +19,7 @@
   --success-bg: rgba(16,185,129,0.1);
   --danger: #EF4444;
   --danger-bg: rgba(239,68,68,0.1);
+  --error: #EF4444;
   --warning: #F59E0B;
   --text-primary: #E2E8F0;
   --text-secondary: #94A3B8;
@@ -721,11 +721,37 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .bookings-section { margin-top: 8px; }
 .bookings-section__title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; }
 .data-table-wrapper { overflow-x: auto; }
-.cancel-btn {
-  padding: 6px 14px; background: transparent; border: 1px solid var(--error);
-  color: var(--error); border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer;
+.receipt-btn {
+  padding: 7px 16px;
+  background: rgba(0, 229, 255, 0.12);      
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: var(--accent);                     
+  border-radius: var(--radius-sm);          
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.cancel-btn:hover { background: var(--error); color: white; }
+.receipt-btn:hover {
+  background: var(--accent);               
+  color: #0B0F19;
+}
+
+.cancel-btn {
+  padding: 7px 16px;
+  background: rgba(239, 68, 68, 0.12);     
+  border: 1px solid rgba(239, 68, 68, 0.4); 
+  color: var(--danger);                   
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cancel-btn:hover {
+  background: var(--danger);                
+  color: #FFFFFF;
+}
 .badge--confirmed { background: rgba(0, 229, 255, 0.12); color: var(--accent); padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
 .badge--cancelled { background: rgba(239, 68, 68, 0.12); color: var(--error); padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
 
