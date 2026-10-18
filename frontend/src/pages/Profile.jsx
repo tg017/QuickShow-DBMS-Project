@@ -12,7 +12,7 @@ export default function Profile() {
       setLoading(true);
       getProfile()
         .then((data) => {
-          setProfile(data || user);
+          setProfile({ ...(data || user), email: user?.email || data?.email });
           setLoading(false);
         })
         .catch(() => {
