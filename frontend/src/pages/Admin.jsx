@@ -222,7 +222,7 @@ export default function Admin() {
       if (authMode === 'login') {
         const res = await adminLogin({ email: adminEmail, password: adminPassword });
         setAdmin(res);
-        localStorage.setItem('quickshow_admin', JSON.stringify(res));
+        sessionStorage.setItem('quickshow_admin', JSON.stringify(res));
         showToast(`Welcome, ${res.firstName || 'Admin'}!`, 'success');
       } else {
         await adminRegister({
@@ -244,7 +244,7 @@ export default function Admin() {
 
   const handleAdminLogout = () => {
     setAdmin(null);
-    localStorage.removeItem('quickshow_admin');
+    sessionStorage.removeItem('quickshow_admin');
     showToast('Admin logged out', 'info');
   };
 
