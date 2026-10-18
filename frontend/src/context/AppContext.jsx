@@ -48,6 +48,8 @@ export function AppProvider({ children }) {
   const loginUser = (userData) => {
     setUser(userData);
     sessionStorage.setItem('quickshow_user', JSON.stringify(userData));
+    setAdmin(null);
+    sessionStorage.removeItem('quickshow_admin');
   };
 
   const logoutUser = () => {
@@ -66,7 +68,7 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      user, loginUser, logoutUser,
+      user, setUser, loginUser, logoutUser,
       admin, setAdmin,
       selectedCity, changeCity,
       selectedDate, setSelectedDate,
