@@ -6,14 +6,14 @@ const AppContext = createContext();
 export function AppProvider({ children }) {
 
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('quickshow_user')); } catch { return null; }
+    try { return JSON.parse(sessionStorage.getItem('quickshow_user')); } catch { return null; }
   });
 
   const [admin, setAdmin] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('quickshow_admin')); } catch { return null; }
+    try { return JSON.parse(sessionStorage.getItem('quickshow_admin')); } catch { return null; }
   });
 
-  const [selectedCity, setSelectedCity] = useState(localStorage.getItem('qs_city') || 'Varanasi');
+  const [selectedCity, setSelectedCity] = useState(sessionStorage.getItem('qs_city') || 'Varanasi');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [filters, setFilters] = useState({ language: '', genre: '', rating: '' });
   const [currentRoute, setCurrentRoute] = useState(window.location.hash.slice(1) || 'home');
@@ -37,28 +37,31 @@ export function AppProvider({ children }) {
     if (user?.token) {
       getMe().then(fresh => {
         if (fresh) setUser(prev => ({ ...prev, ...fresh }));
-      }).catch(() => {});
+      }).catch(() => {
+        setUser(null);
+      sessionStorage.removeItem('quickshow_user');
+      });
     }
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const loginUser = (userData) => {
     setUser(userData);
-    localStorage.setItem('quickshow_user', JSON.stringify(userData));
+    sessionStorage.setItem('quickshow_user', JSON.stringify(userData));
   };
 
   const logoutUser = () => {
     setUser(null);
     setAdmin(null);
-    localStorage.removeItem('quickshow_user');
-    localStorage.removeItem('quickshow_admin');
+    sessionStorage.removeItem('quickshow_user');
+    sessionStorage.removeItem('quickshow_admin');
     navigateTo('home');
     showToast('Logged out successfully');
   };
 
   const changeCity = (city) => {
     setSelectedCity(city);
-    localStorage.setItem('qs_city', city);
+    sessionStorage.setItem('qs_city', city);
   };
 
   return (
