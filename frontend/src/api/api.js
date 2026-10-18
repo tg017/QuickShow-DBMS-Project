@@ -2,9 +2,9 @@ const BASE = '/api';
 
 const getToken = () => {
   try {
-    const u = JSON.parse(localStorage.getItem('quickshow_user') || 'null');
+    const u = JSON.parse(sessionStorage.getItem('quickshow_user') || 'null');
     if (u?.token) return u.token;
-    const a = JSON.parse(localStorage.getItem('quickshow_admin') || 'null');
+    const a = JSON.parse(sessionStorage.getItem('quickshow_admin') || 'null');
     if (a?.token) return a.token;
   } catch {}
   return null;
