@@ -39,7 +39,7 @@ import {
 } from '../api/api';
 
 export default function Admin() {
-  const { admin, setAdmin, showToast } = useApp();
+  const { admin, setAdmin, setUser, showToast } = useApp();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const [authMode, setAuthMode] = useState('login');
@@ -223,6 +223,9 @@ export default function Admin() {
         const res = await adminLogin({ email: adminEmail, password: adminPassword });
         setAdmin(res);
         sessionStorage.setItem('quickshow_admin', JSON.stringify(res));
+        localStorage.removeItem('quickshow_admin');
+        setUser(null);
+        sessionStorage.removeItem('quickshow_user');
         showToast(`Welcome, ${res.firstName || 'Admin'}!`, 'success');
       } else {
         await adminRegister({
@@ -245,6 +248,7 @@ export default function Admin() {
   const handleAdminLogout = () => {
     setAdmin(null);
     sessionStorage.removeItem('quickshow_admin');
+    localStorage.removeItem('quickshow_admin');
     showToast('Admin logged out', 'info');
   };
 
