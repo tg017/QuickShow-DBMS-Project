@@ -195,9 +195,9 @@ export default function Bookings() {
                   <Detail label="Total Paid" value={`₹${b.totalAmount || 0}`} />
                   <Detail label="Status" value={status} highlight={isConfirmed} />
 
-                  <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', marginTop: '8px' }}>
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
                     <button
-                      style={{ background: 'none', border: '1px solid var(--primary)', color: 'var(--primary)', borderRadius: '6px', padding: '6px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                      className="receipt-btn"
                       onClick={() => navigateTo(`booking/${bId}/confirmation`)}
                     >
                       View Receipt
