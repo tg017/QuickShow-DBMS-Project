@@ -1114,7 +1114,7 @@ export default function Admin() {
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {castList.map((c, idx) => {
-                        const actorName = typeof c === 'string' ? c : c.actor || c.name || `Actor #${idx + 1}`;
+                        const actorName = c.id?.actor;
                         return (
                           <div
                             key={idx}
