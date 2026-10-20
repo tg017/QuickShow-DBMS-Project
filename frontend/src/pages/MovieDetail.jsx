@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getMovieById, getShowsByMovie, getTheatres } from '../api/api';
 import { formatLocalDate } from '../api/data';
+import { getPosterSrc, handlePosterError } from '../utils/poster';
 
 const formatScreenType = (st) => {
   if (!st) return '2D';
@@ -153,9 +154,9 @@ export default function MovieDetail({ movieId }) {
       <div className="movie-detail">
         <img
           className="movie-detail__poster"
-          src={movie.poster || movie.posterUrl || 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'}
+          src={getPosterSrc(movie.poster || movie.posterUrl)}
           alt={movie.title || ''}
-          onError={(e) => { e.target.src = 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'; }}
+          onError={handlePosterError}
         />
         <div className="movie-detail__content">
           <h1 className="movie-detail__title">{movie.title || ''}</h1>
@@ -243,7 +244,7 @@ export default function MovieDetail({ movieId }) {
             <div className="spinner" style={{ margin: '30px auto' }}></div>
           ) : theatreShows.length === 0 ? (
             <div className="empty-state" style={{ padding: '30px', textAlign: 'center' }}>
-              <div className="empty-state__icon" style={{ fontSize: '32px' }}>🎬</div>
+              <div className="empty-state__icon" style={{ fontSize: '32px' }}></div>
               <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                 No shows available for this date.
               </p>

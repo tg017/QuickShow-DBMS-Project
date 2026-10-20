@@ -91,7 +91,7 @@ export default function Bookings() {
     if (list.length === 0) {
       return (
         <div style={{ padding: '32px', color: 'var(--text-muted)', textAlign: 'center', fontSize: '14px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>{isUpcoming ? '🎟️' : '📁'}</div>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
           No {isUpcoming ? 'upcoming' : 'past'} bookings found.
         </div>
       );
@@ -142,7 +142,7 @@ export default function Bookings() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '20px', flexShrink: 0,
                 }}>
-                  🎫
+                  
                 </div>
 
                 <div style={{ flex: 1, minWidth: '160px' }}>
@@ -222,7 +222,7 @@ export default function Bookings() {
 
   return (
     <div style={{ padding: '24px' }}>
-      <h2 style={{ fontSize: '24px', marginBottom: '24px', color: 'var(--text-primary)' }}>My Bookings 🎫</h2>
+      <h2 style={{ fontSize: '24px', marginBottom: '24px', color: 'var(--text-primary)' }}>My Bookings</h2>
 
       <div style={{ marginBottom: '36px' }}>
         <h3 style={{ fontSize: '16px', color: 'var(--primary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

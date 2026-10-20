@@ -1,112 +1,100 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { getTheatres, searchTheatresByCity, getTheatreShows } from '../api/api';
-import { formatLocalDate } from '../api/data';
+import { getTheatres, searchTheatresByCity } from '../api/api';
 
-const formatScreenType = (st) => {
-  if (!st) return '2D';
-  return st
-    .replace('TWO_D', '2D')
-    .replace('THREE_D', '3D')
-    .replace('IMAX_3D', 'IMAX 3D')
-    .replace('IMAX_2D', 'IMAX 2D')
-    .replace('FOUR_DX', '4DX')
-    .replace(/_/g, ' ');
-};
+const address = (theatre) => [
+  theatre.buildingName,
+  theatre.street,
+  theatre.area,
+].filter(Boolean).join(', ');
 
 export default function Theatres() {
-  const { selectedCity, selectedDate, navigateTo } = useApp();
+  const { selectedCity, navigateTo } = useApp();
   const [theatres, setTheatres] = useState([]);
-  const [theatreShows, setTheatreShows] = useState({});
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
-    const fetchTheatres = selectedCity && selectedCity.trim()
-      ? searchTheatresByCity(selectedCity.trim()).catch(() => [])
-      : getTheatres().catch(() => []);
-    fetchTheatres
-      .then(async (all) => {
-        const list = Array.isArray(all) ? all : [];
-        setTheatres(list);
-        setLoading(false);
-
-        const targetDate = selectedDate || formatLocalDate(new Date());
-        const showsMap = {};
-        for (const theatre of list) {
-          const tid = theatre.theatreId || theatre.id;
-          try {
-            const shows = await getTheatreShows(tid, targetDate);
-            showsMap[tid] = shows || [];
-          } catch {
-            showsMap[tid] = [];
-          }
-        }
-        setTheatreShows(showsMap);
+    setError('');
+    const request = selectedCity?.trim()
+      ? searchTheatresByCity(selectedCity.trim())
+      : getTheatres();
+    request
+      .then((result) => {
+        if (active) setTheatres(Array.isArray(result) ? result : []);
       })
-      .catch((err) => {
-        console.error(err);
-        setTheatres([]);
-        setLoading(false);
+      .catch((requestError) => {
+        if (active) setError(requestError.message || 'Unable to load theatres.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
-  }, [selectedCity, selectedDate]);
+    return () => { active = false; };
+  }, [selectedCity]);
 
-  if (loading) {
-    return <div className="spinner" style={{ margin: '60px auto' }}></div>;
-  }
+  const visibleTheatres = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return theatres;
+    return theatres.filter((theatre) => [
+      theatre.name, theatre.city, theatre.area, theatre.buildingName,
+    ].some((value) => String(value || '').toLowerCase().includes(query)));
+  }, [search, theatres]);
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h2 className="section-header__title" style={{ marginBottom: '24px' }}>
-        Theatres {selectedCity ? `in ${selectedCity}` : ''} 🏢
-      </h2>
+    <div className="theatres-page">
+      <section className="theatres-page__hero">
+        <div>
+          <div className="theatres-page__eyebrow">GALAXY CINEMAS</div>
+          <h1>Theatres <span>{selectedCity ? `in ${selectedCity}` : 'in All Cities'}</span></h1>
+          <p>Select a cinema hall to browse schedules and showtimes.</p>
+        </div>
+        <label className="theatres-page__search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            placeholder="Filter by city or theatre..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            aria-label="Filter theatres"
+          />
+        </label>
+      </section>
 
-      {theatres.length === 0 ? (
-        <div className="empty-state" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          No theatres found {selectedCity ? `in ${selectedCity}` : ''}.
+      {loading ? (
+        <div className="spinner" />
+      ) : error ? (
+        <div className="empty-state"><p className="empty-state__text">{error}</p></div>
+      ) : visibleTheatres.length === 0 ? (
+        <div className="empty-state">
+          <p className="empty-state__text">No theatres found.</p>
+          <p className="empty-state__sub">Try another city or search term.</p>
         </div>
       ) : (
         <div className="theatre-grid">
-          {theatres.map((theatre) => {
-            const tid = theatre.theatreId || theatre.id;
-            const shows = theatreShows[tid];
-
+          {visibleTheatres.map((theatre) => {
+            const theatreId = theatre.theatreId;
             return (
-              <div key={tid} className="theatre-card">
-                <div className="theatre-card__name">{theatre.name || 'Galaxy Cinema'}</div>
-                <div className="theatre-card__location">
-                  {theatre.buildingName ? `${theatre.buildingName}, ` : ''}
-                  {theatre.street ? `${theatre.street}, ` : ''}
-                  {theatre.area || ''}
+              <article key={theatreId} className="theatre-card theatre-card--directory">
+                <div className="theatre-card__topline">
+                  <span className="theatre-card__pin">◉</span>
+                  <span className="theatre-card__id">ID: {theatreId}</span>
                 </div>
-                <div className="theatre-card__city">
-                  📍 {theatre.city || ''}, {theatre.state || ''} {theatre.pinCode ? `- ${theatre.pinCode}` : ''}
-                </div>
-
-                <div className="theatre-card__shows">
-                  {shows === undefined ? (
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading shows...</div>
-                  ) : shows.length === 0 ? (
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No shows scheduled today</span>
-                  ) : (
-                    shows.map((s) => {
-                      const sid = s.showId || s.id;
-                      const screenType = formatScreenType(s.screen?.screenType || s.screenType);
-                      const timeStr = s.showTime ? s.showTime.slice(0, 5) : '18:00';
-                      return (
-                        <button
-                          key={sid}
-                          className="theatre-card__show-time"
-                          onClick={() => navigateTo(`shows/${sid}/seats`)}
-                          title={`${s.movieTitle ? s.movieTitle + ' · ' : ''}${timeStr} (${screenType}) - Click to select seats`}
-                        >
-                          {timeStr} ({screenType})
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
+                <h2 className="theatre-card__name">{theatre.name || 'Galaxy Cinema'}</h2>
+                <p className="theatre-card__location">{address(theatre) || 'Cinema hall'}</p>
+                <p className="theatre-card__city">
+                  <span aria-hidden="true">◉</span> {theatre.city || '—'}, {theatre.state || ''} {theatre.pinCode ? `- ${theatre.pinCode}` : ''}
+                </p>
+                <button
+                  type="button"
+                  className="theatre-card__browse-btn"
+                  onClick={() => navigateTo(`theatre/${theatreId}`)}
+                >
+                  View Shows &amp; Book Tickets <span>›</span>
+                </button>
+              </article>
             );
           })}
         </div>

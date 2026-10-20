@@ -90,7 +90,7 @@ export default function Confirmation({ bookingId }) {
           ⬇ Download Ticket
         </button>
         <button className="add-btn" onClick={() => navigateTo('bookings')}>
-          🎫 My Bookings
+          My Bookings
         </button>
         <button className="add-btn" onClick={() => navigateTo('home')}>
           🏠 Book More

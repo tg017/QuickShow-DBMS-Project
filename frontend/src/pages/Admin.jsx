@@ -38,6 +38,73 @@ import {
   adminGetTheatrePerformance,
 } from '../api/api';
 
+const formatScreenType = (st) => {
+  if (!st) return '2D';
+  return st
+    .replace('TWO_D', '2D')
+    .replace('THREE_D', '3D')
+    .replace('IMAX_3D', 'IMAX 3D')
+    .replace('IMAX_2D', 'IMAX 2D')
+    .replace('FOUR_DX', '4DX')
+    .replace(/_/g, ' ');
+};
+
+const formatCertificate = (cert) => {
+  if (!cert) return '-';
+  return cert
+    .replace('UA_16_PLUS', 'UA 16+')
+    .replace('UA_7_PLUS', 'UA 7+')
+    .replace('UA_13_PLUS', 'UA 13+')
+    .replace('UA_18_PLUS', 'A')
+    .replace('U_A', 'UA')
+    .replace(/_/g, ' ');
+};
+
+const getScreenRows = (screenObj) => {
+  if (screenObj?.rows && screenObj.rows.length > 0) return screenObj.rows;
+  if (screenObj?.screenId) {
+    try {
+      const cached = localStorage.getItem('quickshow_screen_rows_' + screenObj.screenId);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+  }
+  const cap = parseInt(screenObj?.capacity) || 60;
+  const count = Math.max(1, Math.min(26, Math.ceil(cap / 10)));
+  const basePer = Math.floor(cap / count);
+  let rem = cap % count;
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    const extra = rem > 0 ? 1 : 0;
+    if (rem > 0) rem--;
+    rows.push({
+      rowNo: String.fromCharCode(65 + i),
+      seatCount: basePer + extra,
+    });
+  }
+  return rows;
+};
+
+const todayLocal = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+};
+
+const emptyMovie = () => ({
+  title: '',
+  language: 'English',
+  genre: 'Action',
+  duration: 120,
+  releaseDate: todayLocal(),
+  imdbRating: 8.0,
+  certificate: 'UA_13_PLUS',
+  director: '',
+  poster: '',
+  description: '',
+});
+
 export default function Admin() {
   const { admin, setAdmin, setUser, showToast } = useApp();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -55,6 +122,8 @@ export default function Admin() {
   const [bookings, setBookings] = useState([]);
   const [payments, setPayments] = useState([]);
   const [screens, setScreens] = useState([]);
+  const [showFormScreens, setShowFormScreens] = useState([]);
+  const [allScreens, setAllScreens] = useState([]);
   const [selectedTheatreForScreens, setSelectedTheatreForScreens] = useState('');
   const [loadingData, setLoadingData] = useState(false);
 
@@ -70,18 +139,7 @@ export default function Admin() {
     movieId: '',
   });
 
-  const [newMovie, setNewMovie] = useState({
-    title: '',
-    language: 'English',
-    genre: 'Action',
-    duration: 120,
-    releaseDate: new Date().toISOString().split('T')[0],
-    imdbRating: 8.0,
-    certificate: 'UA_13_PLUS',
-    director: '',
-    poster: '',
-    description: '',
-  });
+  const [newMovie, setNewMovie] = useState(emptyMovie());
   const [editingMovie, setEditingMovie] = useState(null);
 
   const [castMovie, setCastMovie] = useState(null);
@@ -102,15 +160,22 @@ export default function Admin() {
   const [newScreen, setNewScreen] = useState({
     name: 'Screen 1',
     screenType: 'IMAX',
-    capacity: 60,
   });
+  const [screenRows, setScreenRows] = useState([
+    { rowNo: 'A', seatCount: 10 },
+    { rowNo: 'B', seatCount: 10 },
+    { rowNo: 'C', seatCount: 10 },
+    { rowNo: 'D', seatCount: 10 },
+  ]);
   const [editingScreen, setEditingScreen] = useState(null);
+  const [editScreenRows, setEditScreenRows] = useState([]);
+  const [viewingScreenLayout, setViewingScreenLayout] = useState(null);
 
   const [newShow, setNewShow] = useState({
     movieId: '',
     theatreId: '',
     screenId: '',
-    showDate: new Date().toISOString().split('T')[0],
+    showDate: todayLocal(),
     showTime: '18:00',
     ticketPrice: 250,
     showStatus: 'SCHEDULED',
@@ -121,53 +186,49 @@ export default function Admin() {
   const [paymentFilter, setPaymentFilter] = useState({ theatre: '', paymentStatus: '' });
   const [selectedPaymentDetail, setSelectedPaymentDetail] = useState(null);
 
-  const loadAdminData = async () => {
-    setLoadingData(true);
-    try {
-      const [m, t, s, b, p] = await Promise.all([
-        adminGetAllMovies().catch(() => []),
-        adminGetAllTheatres().catch(() => []),
-        adminGetAllShows().catch(() => []),
-        adminGetAllBookings().catch(() => []),
-        adminGetAllPayments().catch(() => []),
-      ]);
+  const handleAdminLogout = () => {
+    setAdmin(null);
+    sessionStorage.removeItem('quickshow_admin');
+    localStorage.removeItem('quickshow_admin');
+    showToast('Admin logged out', 'info');
+  };
 
-      const validMovies = Array.isArray(m) ? m : [];
-      const validTheatres = Array.isArray(t) ? t : [];
-      const validShows = Array.isArray(s) ? s : [];
-      const validBookings = Array.isArray(b) ? b : [];
-      const validPayments = Array.isArray(p) ? p : [];
-
-      setMovies(validMovies);
-      setTheatres(validTheatres);
-      setShows(validShows);
-      setBookings(validBookings);
-      setPayments(validPayments);
-
-      if (validMovies.length > 0 && !newShow.movieId) {
-        setNewShow((prev) => ({ ...prev, movieId: validMovies[0].movieId }));
-      }
-      if (validTheatres.length > 0) {
-        const firstTid = validTheatres[0].theatreId;
-        if (!selectedTheatreForScreens) {
-          setSelectedTheatreForScreens(String(firstTid));
-          loadScreensForTheatre(firstTid);
-        }
-        if (!newShow.theatreId) {
-          setNewShow((prev) => ({ ...prev, theatreId: firstTid }));
-          const sc = await adminGetScreensByTheatre(firstTid).catch(() => []);
-          if (sc && sc.length > 0) {
-            setNewShow((prev) => ({ ...prev, screenId: sc[0].screenId }));
-          }
-        }
-      }
-
-      await loadStatistics();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingData(false);
+  const handleLoadError = (err) => {
+    if (err.status === 401 || err.status === 403 || err.message?.includes('expired') || err.message?.includes('not signed in')) {
+      setAdmin(null);
+      sessionStorage.removeItem('quickshow_admin');
+      showToast('Session expired. Please login again.', 'error');
+    } else {
+      showToast(err.message || 'Failed to load data', 'error');
     }
+  };
+  const safeCall = async (fn, fallback) => {
+    try {
+      return await fn();
+    } catch (err) {
+      handleLoadError(err);
+      return fallback;
+    }
+  };
+
+  const loadShowFormScreens = async (theatreId) => {
+    const sc = await safeCall(() => adminGetScreensByTheatre(theatreId), []);
+    const list = Array.isArray(sc) ? sc : [];
+    setShowFormScreens(list);
+    return list;
+  };
+
+  const loadScreensForTheatre = async (theatreId) => {
+    if (!theatreId) {
+      setScreens([]);
+      return;
+    }
+    const sc = await safeCall(() => adminGetScreensByTheatre(theatreId), []);
+    const list = (Array.isArray(sc) ? sc : []).map((s) => ({
+      ...s,
+      rows: getScreenRows(s),
+    }));
+    setScreens(list);
   };
 
   const loadStatistics = async (overrideFilter) => {
@@ -178,34 +239,77 @@ export default function Admin() {
     if (filter.theatreId) params.theatreId = filter.theatreId;
     if (filter.movieId) params.movieId = filter.movieId;
 
-    try {
-      const [sm, rev, bkg, top, tp] = await Promise.all([
-        adminGetStatsSummary(params).catch(() => null),
-        adminGetStatsRevenue(params).catch(() => null),
-        adminGetStatsBookings(params).catch(() => null),
-        adminGetTopMovies({ ...params, limit: 5 }).catch(() => []),
-        adminGetTheatrePerformance(params).catch(() => []),
-      ]);
-      setStatsSummary(sm);
-      setStatsRevenue(rev);
-      setStatsBookings(bkg);
-      setTopMovies(Array.isArray(top) ? top : []);
-      setTheatrePerformance(Array.isArray(tp) ? tp : []);
-    } catch (err) {
-      console.error(err);
-    }
+    const [sm, rev, bkg, top, tp] = await Promise.all([
+      safeCall(() => adminGetStatsSummary(params), null),
+      safeCall(() => adminGetStatsRevenue(params), null),
+      safeCall(() => adminGetStatsBookings(params), null),
+      safeCall(() => adminGetTopMovies({ ...params, limit: 5 }), []),
+      safeCall(() => adminGetTheatrePerformance(params), []),
+    ]);
+    setStatsSummary(sm);
+    setStatsRevenue(rev);
+    setStatsBookings(bkg);
+    setTopMovies(Array.isArray(top) ? top : []);
+    setTheatrePerformance(Array.isArray(tp) ? tp : []);
   };
 
-  const loadScreensForTheatre = async (theatreId) => {
-    if (!theatreId) {
-      setScreens([]);
-      return;
-    }
+  const loadAdminData = async (overrideFilter) => {
+    setLoadingData(true);
     try {
-      const sc = await adminGetScreensByTheatre(theatreId).catch(() => []);
-      setScreens(Array.isArray(sc) ? sc : []);
-    } catch (err) {
-      showToast(err.message || 'Failed to fetch screens', 'error');
+      const [m, t, s, b, p] = await Promise.all([
+        safeCall(adminGetAllMovies, []),
+        safeCall(adminGetAllTheatres, []),
+        safeCall(adminGetAllShows, []),
+        safeCall(adminGetAllBookings, []),
+        safeCall(adminGetAllPayments, []),
+      ]);
+
+      const validMovies = Array.isArray(m) ? m : [];
+      const detailedMovies = await Promise.all(
+        validMovies.map(async (movie) => {
+          if (movie.language && movie.duration && movie.certificate) return movie;
+          try {
+            const details = await adminGetMovieById(movie.movieId);
+            return details ? { ...movie, ...details } : movie;
+          } catch {
+            return movie;
+          }
+        })
+      );
+      const validTheatres = Array.isArray(t) ? t : [];
+
+      setMovies(detailedMovies);
+      setTheatres(validTheatres);
+      setShows(Array.isArray(s) ? s : []);
+      setBookings(Array.isArray(b) ? b : []);
+      setPayments(Array.isArray(p) ? p : []);
+      const screenPromises = (Array.isArray(t) ? t : []).map((th) => adminGetScreensByTheatre(th.theatreId).catch(() => []));
+      const screenLists = await Promise.all(screenPromises);
+      setAllScreens(screenLists.flat());
+
+      if (validMovies.length > 0 && !newShow.movieId) {
+        setNewShow((prev) => ({ ...prev, movieId: validMovies[0].movieId }));
+      }
+
+      if (validTheatres.length > 0) {
+        const firstTid = validTheatres[0].theatreId;
+        if (!selectedTheatreForScreens) {
+          setSelectedTheatreForScreens(String(firstTid));
+          loadScreensForTheatre(firstTid);
+        }
+        if (!newShow.theatreId) {
+          const sc = await loadShowFormScreens(firstTid);
+          setNewShow((prev) => ({
+            ...prev,
+            theatreId: firstTid,
+            screenId: sc.length > 0 ? sc[0].screenId : '',
+          }));
+        }
+      }
+
+      await loadStatistics(overrideFilter);
+    } finally {
+      setLoadingData(false);
     }
   };
 
@@ -214,6 +318,13 @@ export default function Admin() {
       loadAdminData();
     }
   }, [admin]);
+
+  const openTab = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'shows' && newShow.theatreId) {
+      loadShowFormScreens(newShow.theatreId);
+    }
+  };
 
   const handleAdminAuth = async (e) => {
     e.preventDefault();
@@ -245,13 +356,6 @@ export default function Admin() {
     }
   };
 
-  const handleAdminLogout = () => {
-    setAdmin(null);
-    sessionStorage.removeItem('quickshow_admin');
-    localStorage.removeItem('quickshow_admin');
-    showToast('Admin logged out', 'info');
-  };
-
   const handleAddMovie = async (e) => {
     e.preventDefault();
     try {
@@ -261,18 +365,7 @@ export default function Admin() {
         imdbRating: parseFloat(newMovie.imdbRating),
       });
       showToast('Movie added successfully!', 'success');
-      setNewMovie({
-        title: '',
-        language: 'English',
-        genre: 'Action',
-        duration: 120,
-        releaseDate: new Date().toISOString().split('T')[0],
-        imdbRating: 8.0,
-        certificate: 'UA_13_PLUS',
-        director: '',
-        poster: '',
-        description: '',
-      });
+      setNewMovie(emptyMovie());
       loadAdminData();
     } catch (err) {
       showToast(err.message || 'Failed to add movie', 'error');
@@ -310,7 +403,20 @@ export default function Admin() {
     try {
       await adminDeleteMovie(id);
       showToast('Movie deleted', 'info');
-      loadAdminData();
+
+      const deletedId = String(id);
+      if (String(newShow.movieId) === deletedId) {
+        setNewShow((prev) => ({ ...prev, movieId: '' }));
+      }
+      if (bookingFilter.movie === deletedId) {
+        setBookingFilter((prev) => ({ ...prev, movie: '' }));
+      }
+      let filter = statsFilter;
+      if (statsFilter.movieId === deletedId) {
+        filter = { ...statsFilter, movieId: '' };
+        setStatsFilter(filter);
+      }
+      loadAdminData(filter);
     } catch (err) {
       showToast(err.message || 'Failed to delete movie', 'error');
     }
@@ -399,10 +505,67 @@ export default function Admin() {
     try {
       await adminDeleteTheatre(id);
       showToast('Theatre deleted', 'info');
-      loadAdminData();
+
+      const deletedId = String(id);
+      if (selectedTheatreForScreens === deletedId) {
+        setSelectedTheatreForScreens('');
+        setScreens([]);
+      }
+      if (String(newShow.theatreId) === deletedId) {
+        setNewShow((prev) => ({ ...prev, theatreId: '', screenId: '' }));
+        setShowFormScreens([]);
+      }
+      if (bookingFilter.theatre === deletedId) {
+        setBookingFilter((prev) => ({ ...prev, theatre: '' }));
+      }
+      if (paymentFilter.theatre === deletedId) {
+        setPaymentFilter((prev) => ({ ...prev, theatre: '' }));
+      }
+      let filter = statsFilter;
+      if (statsFilter.theatreId === deletedId) {
+        filter = { ...statsFilter, theatreId: '' };
+        setStatsFilter(filter);
+      }
+      loadAdminData(filter);
     } catch (err) {
       showToast(err.message || 'Failed to delete theatre', 'error');
     }
+  };
+
+  const handleRowCountChange = (count) => {
+    const num = Math.max(1, Math.min(26, parseInt(count) || 1));
+    setScreenRows((prev) => {
+      const next = [];
+      for (let i = 0; i < num; i++) {
+        const char = String.fromCharCode(65 + i);
+        const existing = prev.find((r) => r.rowNo === char);
+        next.push(existing || { rowNo: char, seatCount: 10 });
+      }
+      return next;
+    });
+  };
+
+  const handleRowSeatChange = (index, seatCount) => {
+    setScreenRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], seatCount: Math.max(1, parseInt(seatCount) || 1) };
+      return updated;
+    });
+  };
+
+  const handleAddRow = () => {
+    setScreenRows((prev) => {
+      if (prev.length >= 26) return prev;
+      const nextChar = String.fromCharCode(65 + prev.length);
+      return [...prev, { rowNo: nextChar, seatCount: 10 }];
+    });
+  };
+
+  const handleRemoveRow = (index) => {
+    setScreenRows((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleAddScreen = async (e) => {
@@ -411,13 +574,33 @@ export default function Admin() {
       showToast('Please select a theatre first', 'error');
       return;
     }
+    const totalCapacity = screenRows.reduce((sum, r) => sum + (parseInt(r.seatCount) || 0), 0);
+    if (totalCapacity <= 0) {
+      showToast('Total capacity must be greater than 0', 'error');
+      return;
+    }
     try {
-      await adminAddScreen(parseInt(selectedTheatreForScreens), {
-        ...newScreen,
-        capacity: parseInt(newScreen.capacity),
+      const payloadRows = screenRows.map((r) => ({
+        rowNo: r.rowNo.trim().toUpperCase(),
+        seatCount: parseInt(r.seatCount) || 1,
+      }));
+      const created = await adminAddScreen(parseInt(selectedTheatreForScreens), {
+        name: newScreen.name,
+        screenType: newScreen.screenType,
+        capacity: totalCapacity,
+        rows: payloadRows,
       });
+      if (created?.screenId) {
+        localStorage.setItem('quickshow_screen_rows_' + created.screenId, JSON.stringify(payloadRows));
+      }
       showToast('Screen added successfully!', 'success');
-      setNewScreen({ name: 'Screen 1', screenType: 'IMAX', capacity: 60 });
+      setNewScreen({ name: `Screen ${(screens?.length || 0) + 2}`, screenType: 'IMAX' });
+      setScreenRows([
+        { rowNo: 'A', seatCount: 10 },
+        { rowNo: 'B', seatCount: 10 },
+        { rowNo: 'C', seatCount: 10 },
+        { rowNo: 'D', seatCount: 10 },
+      ]);
       loadScreensForTheatre(parseInt(selectedTheatreForScreens));
     } catch (err) {
       showToast(err.message || 'Failed to add screen', 'error');
@@ -425,24 +608,77 @@ export default function Admin() {
   };
 
   const handleStartEditScreen = async (screenId) => {
+    let sc = null;
     try {
-      const sc = await adminGetScreenById(screenId);
-      setEditingScreen(sc || screens.find((s) => s.screenId === screenId));
+      sc = await adminGetScreenById(screenId);
     } catch {
-      setEditingScreen(screens.find((s) => s.screenId === screenId));
+      sc = screens.find((s) => s.screenId === screenId);
     }
+    const screenObj = sc || screens.find((s) => s.screenId === screenId);
+    if (!screenObj) return;
+    setEditingScreen(screenObj);
+    setEditScreenRows(getScreenRows(screenObj));
+  };
+
+  const handleEditRowCountChange = (count) => {
+    const num = Math.max(1, Math.min(26, parseInt(count) || 1));
+    setEditScreenRows((prev) => {
+      const next = [];
+      for (let i = 0; i < num; i++) {
+        const char = String.fromCharCode(65 + i);
+        const existing = prev.find((r) => r.rowNo === char);
+        next.push(existing || { rowNo: char, seatCount: 10 });
+      }
+      return next;
+    });
+  };
+
+  const handleEditRowSeatChange = (index, seatCount) => {
+    setEditScreenRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], seatCount: Math.max(1, parseInt(seatCount) || 1) };
+      return updated;
+    });
+  };
+
+  const handleAddEditRow = () => {
+    setEditScreenRows((prev) => {
+      if (prev.length >= 26) return prev;
+      const nextChar = String.fromCharCode(65 + prev.length);
+      return [...prev, { rowNo: nextChar, seatCount: 10 }];
+    });
+  };
+
+  const handleRemoveEditRow = (index) => {
+    setEditScreenRows((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleUpdateScreen = async (e) => {
     e.preventDefault();
     if (!editingScreen) return;
+    const totalCapacity = editScreenRows.reduce((sum, r) => sum + (parseInt(r.seatCount) || 0), 0);
+    if (totalCapacity <= 0) {
+      showToast('Total capacity must be greater than 0', 'error');
+      return;
+    }
     try {
+      const payloadRows = editScreenRows.map((r) => ({
+        rowNo: r.rowNo.trim().toUpperCase(),
+        seatCount: parseInt(r.seatCount) || 1,
+      }));
       await adminUpdateScreen(editingScreen.screenId, {
-        ...editingScreen,
-        capacity: parseInt(editingScreen.capacity),
+        name: editingScreen.name,
+        screenType: editingScreen.screenType,
+        capacity: totalCapacity,
+        rows: payloadRows,
       });
+      localStorage.setItem('quickshow_screen_rows_' + editingScreen.screenId, JSON.stringify(payloadRows));
       showToast('Screen updated successfully!', 'success');
       setEditingScreen(null);
+      setEditScreenRows([]);
       loadScreensForTheatre(parseInt(selectedTheatreForScreens));
     } catch (err) {
       showToast(err.message || 'Failed to update screen', 'error');
@@ -454,6 +690,11 @@ export default function Admin() {
     try {
       await adminDeleteScreen(screenId);
       showToast('Screen deleted', 'info');
+
+      if (String(newShow.screenId) === String(screenId)) {
+        setNewShow((prev) => ({ ...prev, screenId: '' }));
+      }
+      setShowFormScreens((prev) => prev.filter((s) => s.screenId !== screenId));
       loadScreensForTheatre(parseInt(selectedTheatreForScreens));
     } catch (err) {
       showToast(err.message || 'Failed to delete screen', 'error');
@@ -462,8 +703,12 @@ export default function Admin() {
 
   const handleTheatreChangeForShow = async (theatreId) => {
     setNewShow((prev) => ({ ...prev, theatreId, screenId: '' }));
-    const sc = await adminGetScreensByTheatre(theatreId).catch(() => []);
-    if (sc && sc.length > 0) {
+    if (!theatreId) {
+      setShowFormScreens([]);
+      return;
+    }
+    const sc = await loadShowFormScreens(theatreId);
+    if (sc.length > 0) {
       setNewShow((prev) => ({ ...prev, screenId: sc[0].screenId }));
     }
   };
@@ -579,19 +824,12 @@ export default function Admin() {
 
   if (!admin) {
     return (
-      <div
-        className="admin-auth"
-        style={{
-          maxWidth: '440px',
-          margin: '40px auto',
-          padding: '28px',
-          background: 'var(--bg-secondary)',
-          borderRadius: '12px',
-          border: '1px solid var(--border-subtle)',
-        }}
-      >
-        <h2 style={{ textAlign: 'center', marginBottom: '16px' }}>🎬 Admin Portal</h2>
-        <div className="auth-modal__tabs" style={{ marginBottom: '20px' }}>
+      <div className="admin-auth admin-auth--page">
+        <div className="auth-modal__header">
+          <div className="auth-modal__logo">QuickShow</div>
+          <p className="auth-modal__subtitle">Sign in to manage movies, theatres and bookings</p>
+        </div>
+        <div className="auth-modal__tabs">
           <button
             className={`auth-modal__tab ${authMode === 'login' ? 'auth-modal__tab--active' : ''}`}
             onClick={() => setAuthMode('login')}
@@ -605,10 +843,10 @@ export default function Admin() {
             Register Admin
           </button>
         </div>
-        <form onSubmit={handleAdminAuth} className="admin-form">
+        <form onSubmit={handleAdminAuth} className="auth-modal__form">
           {authMode === 'register' && (
             <>
-              <div style={{ marginBottom: '12px' }}>
+              <div className="auth-modal__group">
                 <label className="auth-modal__label">First Name</label>
                 <input
                   className="auth-modal__input"
@@ -618,7 +856,7 @@ export default function Admin() {
                   required
                 />
               </div>
-              <div style={{ marginBottom: '12px' }}>
+              <div className="auth-modal__group">
                 <label className="auth-modal__label">Last Name</label>
                 <input
                   className="auth-modal__input"
@@ -630,7 +868,7 @@ export default function Admin() {
               </div>
             </>
           )}
-          <div style={{ marginBottom: '12px' }}>
+          <div className="auth-modal__group">
             <label className="auth-modal__label">Admin Email</label>
             <input
               type="email"
@@ -641,7 +879,7 @@ export default function Admin() {
               required
             />
           </div>
-          <div style={{ marginBottom: '16px' }}>
+          <div className="auth-modal__group">
             <label className="auth-modal__label">Password</label>
             <input
               type="password"
@@ -652,7 +890,7 @@ export default function Admin() {
               required
             />
           </div>
-          <button type="submit" className="auth-modal__submit" disabled={authLoading}>
+          <button type="submit" className="auth-modal__submit admin-auth__submit" disabled={authLoading}>
             {authLoading ? 'Verifying...' : authMode === 'login' ? 'Sign In as Admin' : 'Register Admin'}
           </button>
         </form>
@@ -661,21 +899,21 @@ export default function Admin() {
   }
 
   return (
-    <div className="admin-layout" style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px 16px' }}>
+    <div className="admin-layout">
       <div className="inner-sidebar">
         {[
-          { tab: 'dashboard', icon: '📊', label: 'Dashboard' },
-          { tab: 'movies', icon: '🎬', label: 'Movies' },
-          { tab: 'theatres', icon: '🏢', label: 'Theatres' },
-          { tab: 'screens', icon: '🖥️', label: 'Screens' },
-          { tab: 'shows', icon: '🎭', label: 'Schedule Shows' },
-          { tab: 'bookings', icon: '🎫', label: 'Bookings' },
-          { tab: 'payments', icon: '💳', label: 'Payments' },
+          { tab: 'dashboard', icon: 'DB', label: 'Dashboard' },
+          { tab: 'movies', icon: 'MV', label: 'Movies' },
+          { tab: 'theatres', icon: 'TH', label: 'Theatres' },
+          { tab: 'screens', icon: 'SC', label: 'Screens' },
+          { tab: 'shows', icon: 'SH', label: 'Schedule Shows' },
+          { tab: 'bookings', icon: 'BK', label: 'Bookings' },
+          { tab: 'payments', icon: 'PY', label: 'Payments' },
         ].map(({ tab, icon, label }) => (
           <button
             key={tab}
             className={`inner-sidebar__item ${activeTab === tab ? 'inner-sidebar__item--active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => openTab(tab)}
           >
             <span className="inner-sidebar__item-icon">{icon}</span>
             {label}
@@ -684,7 +922,7 @@ export default function Admin() {
 
         <hr style={{ borderColor: 'var(--border-subtle)', margin: '16px 0' }} />
         <button className="inner-sidebar__item" onClick={handleAdminLogout} style={{ color: 'var(--danger)' }}>
-          <span className="inner-sidebar__item-icon">🚪</span>Exit Admin
+          <span className="inner-sidebar__item-icon">←</span>Exit Admin
         </button>
       </div>
 
@@ -696,7 +934,7 @@ export default function Admin() {
             {activeTab === 'dashboard' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                  <h2>System Overview 📊</h2>
+                  <h2>System Overview</h2>
                   <button className="add-btn" onClick={() => loadAdminData()}>Refresh All Data</button>
                 </div>
 
@@ -785,19 +1023,19 @@ export default function Admin() {
                   </div>
                   <div className="kpi-card">
                     <div className="kpi-card__value" style={{ color: '#4ADE80' }}>
-                      ₹{statsSummary?.totalRevenue ?? 0}
+                      ₹{statsSummary?.totalRevenue || payments.filter((p) => p.paymentStatus === 'SUCCESS').reduce((sum, p) => sum + (p.paymentAmount || 0), 0)}
                     </div>
                     <div className="kpi-card__label">Total Revenue</div>
                   </div>
                   <div className="kpi-card">
                     <div className="kpi-card__value" style={{ color: '#4ADE80' }}>
-                      {statsSummary?.confirmedBookings ?? 0}
+                      {statsBookings?.confirmedBookings ?? bookings.filter((b) => b.bookingStatus === 'CONFIRMED').length}
                     </div>
                     <div className="kpi-card__label">Confirmed</div>
                   </div>
                   <div className="kpi-card">
                     <div className="kpi-card__value" style={{ color: 'var(--danger)' }}>
-                      {statsSummary?.cancelledBookings ?? 0}
+                      {statsBookings?.cancelledBookings ?? bookings.filter((b) => b.bookingStatus === 'CANCELLED').length}
                     </div>
                     <div className="kpi-card__label">Cancelled</div>
                   </div>
@@ -805,19 +1043,19 @@ export default function Admin() {
 
                 {statsRevenue && (
                   <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '24px' }}>
-                    <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Revenue Breakdown 💵</h3>
+                    <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Revenue Breakdown</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                       <div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Online Revenue</div>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ADE80' }}>₹{statsRevenue.onlineRevenue || 0}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Avg Booking Value</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ADE80' }}>₹{Number(statsRevenue.averageBookingValue || 0).toFixed(0)}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Offline Revenue</div>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#00E5FF' }}>₹{statsRevenue.offlineRevenue || 0}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Avg Ticket Price</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#00E5FF' }}>₹{Number(statsRevenue.averageTicketPrice || 0).toFixed(0)}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Ticket Sales Count</div>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#A78BFA' }}>{statsRevenue.ticketSalesCount || 0}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Successful Payments</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#A78BFA' }}>{statsRevenue.successfulPayments ?? payments.filter((p) => p.paymentStatus === 'SUCCESS').length}</div>
                       </div>
                     </div>
                   </div>
@@ -825,19 +1063,19 @@ export default function Admin() {
 
                 {statsBookings && (
                   <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '24px' }}>
-                    <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Booking Trends 📈</h3>
+                    <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Booking Trends</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                       <div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Total Tickets Booked</div>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#FFD700' }}>{statsBookings.totalTicketsBooked || 0}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Total Tickets Sold</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#FFD700' }}>{statsBookings.ticketsSold || bookings.filter((b) => b.bookingStatus === 'CONFIRMED').reduce((sum, b) => sum + (b.totalSeatsCount || 0), 0)}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Completed Bookings</div>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ADE80' }}>{statsBookings.completedBookings || 0}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Confirmed Bookings</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ADE80' }}>{statsBookings.confirmedBookings ?? bookings.filter((b) => b.bookingStatus === 'CONFIRMED').length}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Cancelled Bookings</div>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--danger)' }}>{statsBookings.cancelledBookings || 0}</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--danger)' }}>{statsBookings.cancelledBookings ?? bookings.filter((b) => b.bookingStatus === 'CANCELLED').length}</div>
                       </div>
                     </div>
                   </div>
@@ -845,7 +1083,7 @@ export default function Admin() {
 
                 {topMovies.length > 0 && (
                   <div style={{ marginBottom: '24px' }}>
-                    <h3 style={{ marginBottom: '12px' }}>Top Performing Movies 🏆</h3>
+                    <h3 style={{ marginBottom: '12px' }}>Top Performing Movies</h3>
                     <table className="bookings-table">
                       <thead>
                         <tr>
@@ -858,8 +1096,8 @@ export default function Admin() {
                         {topMovies.map((tm, idx) => (
                           <tr key={idx}>
                             <td><strong>{tm.movieTitle || tm.title || `Movie #${tm.movieId}`}</strong></td>
-                            <td>{tm.totalBookings || 0}</td>
-                            <td>₹{tm.totalRevenue || 0}</td>
+                            <td>{tm.bookings ?? tm.totalBookings ?? 0}</td>
+                            <td>₹{tm.revenue ?? tm.totalRevenue ?? 0}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -869,27 +1107,30 @@ export default function Admin() {
 
                 {theatrePerformance.length > 0 && (
                   <div>
-                    <h3 style={{ marginBottom: '12px' }}>Theatre Performance Breakdown 🏢</h3>
+                    <h3 style={{ marginBottom: '12px' }}>Theatre Performance Breakdown</h3>
                     <table className="bookings-table">
                       <thead>
                         <tr>
                           <th>Theatre</th>
                           <th>City</th>
                           <th>Total Shows</th>
+                          <th>Tickets Sold</th>
                           <th>Total Revenue</th>
-                          <th>Occupancy Rate</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {theatrePerformance.map((tp, idx) => (
-                          <tr key={idx}>
-                            <td><strong>{tp.theatreName || `Theatre #${tp.theatreId}`}</strong></td>
-                            <td>{tp.city || '-'}</td>
-                            <td>{tp.totalShows || 0}</td>
-                            <td>₹{tp.totalRevenue || 0}</td>
-                            <td>{tp.occupancyRate != null ? `${tp.occupancyRate}%` : '-'}</td>
-                          </tr>
-                        ))}
+                        {theatrePerformance.map((tp, idx) => {
+                          const theatreObj = theatres.find((t) => t.theatreId === tp.theatreId);
+                          return (
+                            <tr key={idx}>
+                              <td><strong>{tp.theatreName || `Theatre #${tp.theatreId}`}</strong></td>
+                              <td>{theatreObj?.city || tp.city || '-'}</td>
+                              <td>{tp.totalShows || 0}</td>
+                              <td>{tp.ticketsSold || 0}</td>
+                              <td>₹{tp.revenue ?? tp.totalRevenue ?? 0}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -899,7 +1140,7 @@ export default function Admin() {
 
             {activeTab === 'movies' && (
               <div>
-                <h2 style={{ marginBottom: '16px' }}>Manage Movies 🎬</h2>
+                <h2 style={{ marginBottom: '16px' }}>Manage Movies</h2>
 
                 <form
                   onSubmit={handleAddMovie}
@@ -1003,7 +1244,7 @@ export default function Admin() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>✏️ Edit Movie #{editingMovie.movieId}</h3>
+                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>Edit Movie #{editingMovie.movieId}</h3>
                       <button type="button" className="cancel-btn" onClick={() => setEditingMovie(null)}>Close</button>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
@@ -1100,7 +1341,7 @@ export default function Admin() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>🎭 Cast Members for "{castMovie.title}"</h3>
+                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>Cast Members for "{castMovie.title}"</h3>
                       <button type="button" className="cancel-btn" onClick={() => setCastMovie(null)}>Close</button>
                     </div>
 
@@ -1155,10 +1396,10 @@ export default function Admin() {
                     <tr>
                       <th>ID</th>
                       <th>Title</th>
-                      <th>Genre</th>
                       <th>Language</th>
-                      <th>Certificate</th>
+                      <th>Genre</th>
                       <th>Duration</th>
+                      <th>Certificate</th>
                       <th>IMDb</th>
                       <th>Actions</th>
                     </tr>
@@ -1166,23 +1407,25 @@ export default function Admin() {
                   <tbody>
                     {movies.map((m) => (
                       <tr key={m.movieId}>
-                        <td>{m.movieId}</td>
+                        <td>#{m.movieId}</td>
                         <td><strong>{m.title}</strong></td>
-                        <td>{m.genre}</td>
-                        <td>{m.language}</td>
-                        <td>{m.certificate || '-'}</td>
-                        <td>{m.duration ? `${m.duration}m` : '-'}</td>
+                        <td>{m.language || '-'}</td>
+                        <td>{m.genre || '-'}</td>
+                        <td>{m.duration ? `${m.duration} min` : '-'}</td>
+                        <td>{m.certificate ? formatCertificate(m.certificate) : '-'}</td>
                         <td>⭐ {m.imdbRating || '-'}</td>
-                        <td style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          <button className="add-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleStartEditMovie(m.movieId)}>
-                            Edit
-                          </button>
-                          <button className="add-btn" style={{ padding: '4px 8px', fontSize: '11px', background: '#A78BFA' }} onClick={() => handleOpenCastModal(m)}>
-                            Cast
-                          </button>
-                          <button className="cancel-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteMovie(m.movieId)}>
-                            Delete
-                          </button>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <button className="add-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleStartEditMovie(m.movieId)}>
+                              Edit
+                            </button>
+                            <button className="add-btn" style={{ padding: '4px 8px', fontSize: '11px', background: '#A78BFA' }} onClick={() => handleOpenCastModal(m)}>
+                              Cast
+                            </button>
+                            <button className="cancel-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteMovie(m.movieId)}>
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1198,7 +1441,7 @@ export default function Admin() {
 
             {activeTab === 'theatres' && (
               <div>
-                <h2 style={{ marginBottom: '16px' }}>Manage Theatres 🏢</h2>
+                <h2 style={{ marginBottom: '16px' }}>Manage Theatres</h2>
 
                 <form
                   onSubmit={handleAddTheatre}
@@ -1276,7 +1519,7 @@ export default function Admin() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>✏️ Edit Theatre #{editingTheatre.theatreId}</h3>
+                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>Edit Theatre #{editingTheatre.theatreId}</h3>
                       <button type="button" className="cancel-btn" onClick={() => setEditingTheatre(null)}>Close</button>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
@@ -1361,7 +1604,7 @@ export default function Admin() {
 
             {activeTab === 'screens' && (
               <div>
-                <h2 style={{ marginBottom: '16px' }}>Manage Screens 🖥️</h2>
+                <h2 style={{ marginBottom: '16px' }}>Manage Screens</h2>
 
                 <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '24px' }}>
                   <label className="auth-modal__label">Select Theatre to View Screens</label>
@@ -1391,36 +1634,117 @@ export default function Admin() {
                       marginBottom: '24px',
                     }}
                   >
-                    <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>+ Add Screen to Theatre</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                      <input
-                        className="auth-modal__input"
-                        placeholder="Screen Name *"
-                        value={newScreen.name}
-                        onChange={(e) => setNewScreen({ ...newScreen, name: e.target.value })}
-                        required
-                      />
-                      <select
-                        className="sidebar__select"
-                        value={newScreen.screenType}
-                        onChange={(e) => setNewScreen({ ...newScreen, screenType: e.target.value })}
-                      >
-                        <option value="TWO_D">2D</option>
-                        <option value="THREE_D">3D</option>
-                        <option value="IMAX">IMAX</option>
-                        <option value="IMAX_3D">IMAX 3D</option>
-                        <option value="FOUR_DX">4DX</option>
-                      </select>
-                      <input
-                        type="number"
-                        className="auth-modal__input"
-                        placeholder="Capacity *"
-                        value={newScreen.capacity}
-                        onChange={(e) => setNewScreen({ ...newScreen, capacity: e.target.value })}
-                        required
-                      />
+                    <h3 style={{ fontSize: '16px', marginBottom: '16px' }}>+ Add Screen to Theatre</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                      <div>
+                        <label className="auth-modal__label">Screen Name</label>
+                        <input
+                          className="auth-modal__input"
+                          placeholder="Screen Name *"
+                          value={newScreen.name}
+                          onChange={(e) => setNewScreen({ ...newScreen, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="auth-modal__label">Screen Type</label>
+                        <select
+                          className="sidebar__select"
+                          value={newScreen.screenType}
+                          onChange={(e) => setNewScreen({ ...newScreen, screenType: e.target.value })}
+                        >
+                          <option value="TWO_D">2D</option>
+                          <option value="THREE_D">3D</option>
+                          <option value="IMAX">IMAX</option>
+                          <option value="IMAX_3D">IMAX 3D</option>
+                          <option value="FOUR_DX">4DX</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="auth-modal__label">Number of Rows</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="26"
+                          className="auth-modal__input"
+                          value={screenRows.length}
+                          onChange={(e) => handleRowCountChange(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
-                    <button type="submit" className="add-btn" style={{ marginTop: '12px' }}>Add Screen</button>
+
+                    <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>Seat Configuration by Row</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '13px', background: 'rgba(0, 229, 255, 0.12)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '4px', fontWeight: 600, border: '1px solid rgba(0, 229, 255, 0.25)' }}>
+                            Total Capacity: {screenRows.reduce((sum, r) => sum + (parseInt(r.seatCount) || 0), 0)} seats
+                          </span>
+                          <button
+                            type="button"
+                            className="add-btn"
+                            style={{ padding: '4px 10px', fontSize: '12px' }}
+                            onClick={handleAddRow}
+                            disabled={screenRows.length >= 26}
+                          >
+                            + Add Row
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
+                        {screenRows.map((row, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'var(--bg-secondary)',
+                              padding: '8px 10px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-subtle)',
+                            }}
+                          >
+                            <span style={{ fontWeight: 700, width: '22px', textAlign: 'center', color: 'var(--accent)' }}>
+                              {row.rowNo}
+                            </span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="50"
+                              value={row.seatCount}
+                              onChange={(e) => handleRowSeatChange(idx, e.target.value)}
+                              className="auth-modal__input"
+                              style={{ width: '55px', padding: '4px 6px', textAlign: 'center', margin: 0 }}
+                              required
+                            />
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>seats</span>
+                            {screenRows.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRow(idx)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--error, #ef4444)',
+                                  cursor: 'pointer',
+                                  padding: '0 2px',
+                                  fontSize: '13px',
+                                  lineHeight: 1,
+                                }}
+                                title="Remove row"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button type="submit" className="add-btn">Add Screen</button>
                   </form>
                 )}
 
@@ -1435,43 +1759,185 @@ export default function Admin() {
                       marginBottom: '24px',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>✏️ Edit Screen #{editingScreen.screenId}</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>Edit Screen #{editingScreen.screenId}</h3>
                       <button type="button" className="cancel-btn" onClick={() => setEditingScreen(null)}>Close</button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                      <input
-                        className="auth-modal__input"
-                        placeholder="Screen Name"
-                        value={editingScreen.name || ''}
-                        onChange={(e) => setEditingScreen({ ...editingScreen, name: e.target.value })}
-                        required
-                      />
-                      <select
-                        className="sidebar__select"
-                        value={editingScreen.screenType || 'TWO_D'}
-                        onChange={(e) => setEditingScreen({ ...editingScreen, screenType: e.target.value })}
-                      >
-                        <option value="TWO_D">2D</option>
-                        <option value="THREE_D">3D</option>
-                        <option value="IMAX">IMAX</option>
-                        <option value="IMAX_3D">IMAX 3D</option>
-                        <option value="FOUR_DX">4DX</option>
-                      </select>
-                      <input
-                        type="number"
-                        className="auth-modal__input"
-                        placeholder="Capacity"
-                        value={editingScreen.capacity || ''}
-                        onChange={(e) => setEditingScreen({ ...editingScreen, capacity: e.target.value })}
-                        required
-                      />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                      <div>
+                        <label className="auth-modal__label">Screen Name</label>
+                        <input
+                          className="auth-modal__input"
+                          placeholder="Screen Name"
+                          value={editingScreen.name || ''}
+                          onChange={(e) => setEditingScreen({ ...editingScreen, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="auth-modal__label">Screen Type</label>
+                        <select
+                          className="sidebar__select"
+                          value={editingScreen.screenType || 'TWO_D'}
+                          onChange={(e) => setEditingScreen({ ...editingScreen, screenType: e.target.value })}
+                        >
+                          <option value="TWO_D">2D</option>
+                          <option value="THREE_D">3D</option>
+                          <option value="IMAX">IMAX</option>
+                          <option value="IMAX_3D">IMAX 3D</option>
+                          <option value="FOUR_DX">4DX</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="auth-modal__label">Number of Rows</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="26"
+                          className="auth-modal__input"
+                          value={editScreenRows.length}
+                          onChange={(e) => handleEditRowCountChange(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+
+                    <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>Seat Configuration by Row</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '13px', background: 'rgba(0, 229, 255, 0.12)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '4px', fontWeight: 600, border: '1px solid rgba(0, 229, 255, 0.25)' }}>
+                            Total Capacity: {editScreenRows.reduce((sum, r) => sum + (parseInt(r.seatCount) || 0), 0)} seats
+                          </span>
+                          <button
+                            type="button"
+                            className="add-btn"
+                            style={{ padding: '4px 10px', fontSize: '12px' }}
+                            onClick={handleAddEditRow}
+                            disabled={editScreenRows.length >= 26}
+                          >
+                            + Add Row
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
+                        {editScreenRows.map((row, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'var(--bg-surface)',
+                              padding: '8px 10px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-subtle)',
+                            }}
+                          >
+                            <span style={{ fontWeight: 700, width: '22px', textAlign: 'center', color: 'var(--accent)' }}>
+                              {row.rowNo}
+                            </span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="50"
+                              value={row.seatCount}
+                              onChange={(e) => handleEditRowSeatChange(idx, e.target.value)}
+                              className="auth-modal__input"
+                              style={{ width: '55px', padding: '4px 6px', textAlign: 'center', margin: 0 }}
+                              required
+                            />
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>seats</span>
+                            {editScreenRows.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveEditRow(idx)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--error, #ef4444)',
+                                  cursor: 'pointer',
+                                  padding: '0 2px',
+                                  fontSize: '13px',
+                                  lineHeight: 1,
+                                }}
+                                title="Remove row"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
                       <button type="submit" className="add-btn">Save Changes</button>
                       <button type="button" className="cancel-btn" onClick={() => setEditingScreen(null)}>Cancel</button>
                     </div>
                   </form>
+                )}
+
+                {viewingScreenLayout && (
+                  <div
+                    style={{
+                      background: 'var(--bg-surface)',
+                      padding: '20px',
+                      borderRadius: '8px',
+                      border: '2px solid var(--primary)',
+                      marginBottom: '24px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <h3 style={{ fontSize: '16px', color: 'var(--primary)', margin: 0 }}>
+                          {viewingScreenLayout.name} Layout ({formatScreenType(viewingScreenLayout.screenType)})
+                        </h3>
+                        <span style={{ fontSize: '13px', background: 'rgba(0, 229, 255, 0.12)', color: 'var(--primary)', padding: '3px 10px', borderRadius: '4px', fontWeight: 600 }}>
+                          {viewingScreenLayout.capacity} seats · {(viewingScreenLayout.rows || []).length} rows
+                        </span>
+                      </div>
+                      <button type="button" className="cancel-btn" onClick={() => setViewingScreenLayout(null)}>✕ Close</button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowX: 'auto', padding: '16px', background: 'var(--bg-secondary)', borderRadius: '6px' }}>
+                      <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '3px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px', marginBottom: '12px' }}>
+                        SCREEN THIS WAY
+                      </div>
+                      {(viewingScreenLayout.rows || []).map((row, rIdx) => (
+                        <div key={rIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                          <span style={{ fontWeight: 700, width: '24px', textAlign: 'center', color: 'var(--accent)' }}>
+                            {row.rowNo}
+                          </span>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            {Array.from({ length: row.seatCount }).map((_, sIdx) => (
+                              <div
+                                key={sIdx}
+                                style={{
+                                  width: '26px',
+                                  height: '24px',
+                                  fontSize: '10px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: '3px',
+                                  background: 'rgba(255, 255, 255, 0.08)',
+                                  border: '1px solid var(--border-subtle)',
+                                  color: 'var(--text-secondary)',
+                                }}
+                              >
+                                {sIdx + 1}
+                              </div>
+                            ))}
+                          </div>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '60px', textAlign: 'right' }}>
+                            ({row.seatCount} seats)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 <table className="bookings-table">
@@ -1481,29 +1947,50 @@ export default function Admin() {
                       <th>Name</th>
                       <th>Screen Type</th>
                       <th>Capacity</th>
+                      <th>Seat Layout</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {screens.map((sc) => (
-                      <tr key={sc.screenId}>
-                        <td>#{sc.screenId}</td>
-                        <td><strong>{sc.name}</strong></td>
-                        <td>{sc.screenType}</td>
-                        <td>{sc.capacity || '-'} seats</td>
-                        <td style={{ display: 'flex', gap: '8px' }}>
-                          <button className="add-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleStartEditScreen(sc.screenId)}>
-                            Edit
-                          </button>
-                          <button className="cancel-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteScreen(sc.screenId)}>
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {screens.map((sc) => {
+                      const rows = sc.rows || getScreenRows(sc);
+                      return (
+                        <tr key={sc.screenId}>
+                          <td>#{sc.screenId}</td>
+                          <td><strong>{sc.name}</strong></td>
+                          <td>{formatScreenType(sc.screenType)}</td>
+                          <td>{sc.capacity || '-'} seats</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                {rows.length} rows ({rows[0]?.rowNo || 'A'}-{rows[rows.length - 1]?.rowNo || 'A'})
+                              </span>
+                              <button
+                                type="button"
+                                className="add-btn"
+                                style={{ padding: '3px 8px', fontSize: '11px', background: 'rgba(0, 229, 255, 0.15)', color: 'var(--primary)', border: '1px solid rgba(0, 229, 255, 0.3)' }}
+                                onClick={() => setViewingScreenLayout({ ...sc, rows })}
+                              >
+                                View Layout
+                              </button>
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button className="add-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleStartEditScreen(sc.screenId)}>
+                                Edit
+                              </button>
+                              <button className="cancel-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteScreen(sc.screenId)}>
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {screens.length === 0 && (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                        <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
                           {selectedTheatreForScreens ? 'No screens found for this theatre.' : 'Please select a theatre above.'}
                         </td>
                       </tr>
@@ -1515,7 +2002,7 @@ export default function Admin() {
 
             {activeTab === 'shows' && (
               <div>
-                <h2 style={{ marginBottom: '16px' }}>Schedule Shows 🎭</h2>
+                <h2 style={{ marginBottom: '16px' }}>Schedule Shows</h2>
 
                 <form
                   onSubmit={handleAddShow}
@@ -1549,7 +2036,7 @@ export default function Admin() {
                       <select
                         className="sidebar__select"
                         value={newShow.theatreId}
-                        onChange={(e) => handleTheatreChangeForShow(parseInt(e.target.value))}
+                        onChange={(e) => handleTheatreChangeForShow(e.target.value)}
                         required
                       >
                         <option value="">-- Select Theatre --</option>
@@ -1568,9 +2055,9 @@ export default function Admin() {
                         required
                       >
                         <option value="">-- Select Screen --</option>
-                        {screens.map((sc) => (
+                        {showFormScreens.map((sc) => (
                           <option key={sc.screenId} value={sc.screenId}>
-                            {sc.name || `Screen ${sc.screenId}`} ({sc.screenType})
+                            {sc.name || `Screen ${sc.screenId}`} ({formatScreenType(sc.screenType)})
                           </option>
                         ))}
                       </select>
@@ -1638,7 +2125,7 @@ export default function Admin() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>✏️ Edit Show #{editingShow.showId}</h3>
+                      <h3 style={{ fontSize: '16px', color: 'var(--accent)' }}>Edit Show #{editingShow.showId}</h3>
                       <button type="button" className="cancel-btn" onClick={() => setEditingShow(null)}>Close</button>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
@@ -1709,27 +2196,32 @@ export default function Admin() {
                   </thead>
                   <tbody>
                     {shows.map((s) => {
-                      const sid = s.showId || s.id;
-                      return (
-                        <tr key={sid}>
-                          <td>#{sid}</td>
-                          <td>{s.movieTitle || s.movie?.title || `Movie #${s.movieId}`}</td>
-                          <td>{s.showDate || '-'}</td>
-                          <td>{s.showTime ? String(s.showTime).slice(0, 5) : '-'}</td>
-                          <td>{s.screenType || s.screen?.screenType || '-'}</td>
+                    const sid = s.showId || s.id;
+                    const screenObj = allScreens.find((sc) => sc.screenId === s.screenId);
+                    const movieObj = movies.find((m) => m.movieId === s.movieId);
+                    const screenType = screenObj?.screenType || s.screenType;
+                    return (
+                    <tr key={sid}>
+                    <td>#{sid}</td>
+      <td>{movieObj?.title || s.movieTitle || `Movie #${s.movieId}`}</td>
+      <td>{s.showDate || '-'}</td>
+      <td>{s.showTime ? String(s.showTime).slice(0, 5) : '-'}</td>
+      <td>{screenType ? formatScreenType(screenType) : '-'}</td>
                           <td>₹{s.ticketPrice || '-'}</td>
                           <td>
                             <span className={`badge badge--${s.showStatus === 'CANCELLED' ? 'cancelled' : 'confirmed'}`}>
                               {s.showStatus || 'SCHEDULED'}
                             </span>
                           </td>
-                          <td style={{ display: 'flex', gap: '6px' }}>
-                            <button className="add-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleStartEditShow(sid)}>
-                              Edit
-                            </button>
-                            <button className="cancel-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteShow(sid)}>
-                              Delete
-                            </button>
+                          <td>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button className="add-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleStartEditShow(sid)}>
+                                Edit
+                              </button>
+                              <button className="cancel-btn" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteShow(sid)}>
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1746,7 +2238,7 @@ export default function Admin() {
 
             {activeTab === 'bookings' && (
               <div>
-                <h2 style={{ marginBottom: '16px' }}>All System Bookings 🎫</h2>
+                <h2 style={{ marginBottom: '16px' }}>All System Bookings</h2>
 
                 <form
                   onSubmit={handleSearchBookings}
@@ -1800,8 +2292,6 @@ export default function Admin() {
                       <th>Booking ID</th>
                       <th>Movie</th>
                       <th>Theatre</th>
-                      <th>Date</th>
-                      <th>Seats</th>
                       <th>Amount</th>
                       <th>Status</th>
                     </tr>
@@ -1811,16 +2301,12 @@ export default function Admin() {
                       const bId = b.bookingId || b.id || '-';
                       const movieTitle = b.movieName || b.movie?.title || b.movieTitle || '-';
                       const theatreName = b.theatreName || b.theatre?.name || '-';
-                      const showDate = b.show?.showDate || b.showDate || '';
-                      const seatCount = b.totalSeatCount || b.seats?.length || b.seatIds?.length || '-';
                       const status = b.bookingStatus || b.status || 'CONFIRMED';
                       return (
                         <tr key={bId}>
                           <td>#BK-{bId}</td>
                           <td>{movieTitle}</td>
                           <td>{theatreName}</td>
-                          <td>{showDate}</td>
-                          <td>{seatCount} seat(s)</td>
                           <td>₹{b.totalAmount || 0}</td>
                           <td>
                             <span className={`badge badge--${status === 'CANCELLED' ? 'cancelled' : 'confirmed'}`}>
@@ -1832,7 +2318,7 @@ export default function Admin() {
                     })}
                     {bookings.length === 0 && (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                        <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
                           No bookings found.
                         </td>
                       </tr>
@@ -1844,7 +2330,7 @@ export default function Admin() {
 
             {activeTab === 'payments' && (
               <div>
-                <h2 style={{ marginBottom: '16px' }}>Payment Transactions 💳</h2>
+                <h2 style={{ marginBottom: '16px' }}>Payment Transactions</h2>
 
                 <form
                   onSubmit={handleSearchPayments}

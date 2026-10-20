@@ -8,6 +8,15 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) {
+      setAuthTab('login');
+      setAuthModalOpen(true);
+      return;
+    }
+    setAuthModalOpen(false);
+  }, [user, setAuthModalOpen, setAuthTab]);
+
+  useEffect(() => {
     if (user) {
       setLoading(true);
       getProfile()
@@ -24,15 +33,8 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        <h2>Sign In to View Profile</h2>
-        <p style={{ margin: '12px 0 20px' }}>Please login to view and manage your profile details.</p>
-        <button 
-          className="movie-card__book-btn"
-          onClick={() => { setAuthTab('login'); setAuthModalOpen(true); }}
-        >
-          Sign In Now
-        </button>
+      <div className="profile-page profile-page--redirecting">
+        <div className="spinner" />
       </div>
     );
   }
@@ -45,7 +47,15 @@ export default function Profile() {
   const initials = (((p.firstName?.[0] || '') + (p.lastName?.[0] || '')).toUpperCase()) || 'U';
 
   return (
-    <div className="profile-view">
+    <div className="profile-page">
+      <div className="profile-page__intro">
+        <div>
+          <div className="profile-page__eyebrow">ACCOUNT CENTER</div>
+          <h1>My Profile</h1>
+          <p>Manage your personal details and bookings.</p>
+        </div>
+      </div>
+      <div className="profile-view">
       <div className="profile-view__header">
         <div className="profile-view__avatar">{initials}</div>
         <div>
@@ -108,11 +118,12 @@ export default function Profile() {
 
       <div style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         <button className="add-btn" onClick={() => navigateTo('bookings')}>
-          🎫 My Bookings
+          My Bookings
         </button>
         <button className="profile-view__signout" onClick={logoutUser}>
-          🚪 Sign Out
+          Sign Out
         </button>
+      </div>
       </div>
     </div>
   );
