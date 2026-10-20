@@ -233,6 +233,12 @@ export default function Admin() {
 
   const loadStatistics = async (overrideFilter) => {
     const filter = overrideFilter || statsFilter;
+
+    if (filter.from && filter.to && filter.from > filter.to) {
+      showToast("'From' date cannot be after 'To' date", 'warning');
+      return;
+    }
+
     const params = {};
     if (filter.from) params.from = filter.from;
     if (filter.to) params.to = filter.to;
@@ -1023,7 +1029,7 @@ export default function Admin() {
                   </div>
                   <div className="kpi-card">
                     <div className="kpi-card__value" style={{ color: '#4ADE80' }}>
-                      ₹{statsSummary?.totalRevenue || payments.filter((p) => p.paymentStatus === 'SUCCESS').reduce((sum, p) => sum + (p.paymentAmount || 0), 0)}
+                      ₹{statsSummary?.totalRevenue ?? payments.filter((p) => p.paymentStatus === 'SUCCESS').reduce((sum, p) => sum + (p.paymentAmount || 0), 0)}
                     </div>
                     <div className="kpi-card__label">Total Revenue</div>
                   </div>
@@ -1067,7 +1073,7 @@ export default function Admin() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                       <div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Total Tickets Sold</div>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#FFD700' }}>{statsBookings.ticketsSold || bookings.filter((b) => b.bookingStatus === 'CONFIRMED').reduce((sum, b) => sum + (b.totalSeatsCount || 0), 0)}</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#FFD700' }}>{statsBookings.ticketsSold ?? bookings.filter((b) => b.bookingStatus === 'CONFIRMED').reduce((sum, b) => sum + (b.totalSeatsCount || 0), 0)}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Confirmed Bookings</div>
@@ -1088,6 +1094,7 @@ export default function Admin() {
                       <thead>
                         <tr>
                           <th>Movie</th>
+                          <th>Tickets Sold</th>
                           <th>Total Bookings</th>
                           <th>Total Revenue</th>
                         </tr>
@@ -1096,6 +1103,7 @@ export default function Admin() {
                         {topMovies.map((tm, idx) => (
                           <tr key={idx}>
                             <td><strong>{tm.movieTitle || tm.title || `Movie #${tm.movieId}`}</strong></td>
+                            <td>{tm.ticketsSold ?? 0}</td>
                             <td>{tm.bookings ?? tm.totalBookings ?? 0}</td>
                             <td>₹{tm.revenue ?? tm.totalRevenue ?? 0}</td>
                           </tr>

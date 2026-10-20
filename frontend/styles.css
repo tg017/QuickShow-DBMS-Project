@@ -445,6 +445,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
   width: 80px; height: 80px; border-radius: 50%; background: var(--success-bg); border: 2px solid var(--success);
   display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; color: var(--success);
 }
+.confirmation-view__icon--cancelled {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+  color: var(--danger);
+}
 .confirmation-view__title { font-size: 28px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
 .confirmation-view__subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 32px; }
 .confirmation-view__card {

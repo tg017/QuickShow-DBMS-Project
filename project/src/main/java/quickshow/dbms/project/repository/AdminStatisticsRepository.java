@@ -96,6 +96,7 @@ public class AdminStatisticsRepository {
                         ON p.BookingID = fb.BookingID
 
                     WHERE p.PaymentStatus = 'SUCCESS'
+                      AND fb.BookingStatus = 'CONFIRMED'
                 )
 
 
@@ -305,6 +306,7 @@ public class AdminStatisticsRepository {
                         SUM(
                             CASE
                                 WHEN p.PaymentStatus = 'SUCCESS'
+                                 AND fb.BookingStatus = 'CONFIRMED'
                                 THEN p.PaymentAmount
                                 ELSE 0
                             END
@@ -643,11 +645,10 @@ public class AdminStatisticsRepository {
 
                     sh.MovieID,
 
-                    SUM(
+                    COUNT(
                         CASE
                             WHEN b.BookingStatus = 'CONFIRMED'
-                            THEN b.TotalSeatsCount
-                            ELSE 0
+                            THEN 1
                         END
                     ) AS TicketsSold,
 
@@ -707,12 +708,16 @@ public class AdminStatisticsRepository {
 
                     ON bs.ShowID = sh.ShowID
 
+                JOIN Booking b
+                    ON b.BookingID = bs.BookingID
+
                 JOIN Payment p
                     ON p.BookingID = bs.BookingID
 
                 WHERE sh.ShowDate BETWEEN ? AND ?
 
                   AND p.PaymentStatus = 'SUCCESS'
+                  AND b.BookingStatus = 'CONFIRMED'
 
                   AND (
                       ? IS NULL
@@ -849,11 +854,10 @@ public class AdminStatisticsRepository {
 
                     sc.TheatreID,
 
-                    SUM(
+                    COUNT(
                         CASE
                             WHEN b.BookingStatus = 'CONFIRMED'
-                            THEN b.TotalSeatsCount
-                            ELSE 0
+                            THEN 1
                         END
                     ) AS TicketsSold
 
@@ -905,12 +909,16 @@ public class AdminStatisticsRepository {
 
                     ON bs.ShowID = sh.ShowID
 
+                JOIN Booking b
+                    ON b.BookingID = bs.BookingID
+
                 JOIN Payment p
                     ON p.BookingID = bs.BookingID
 
                 WHERE sh.ShowDate BETWEEN ? AND ?
 
                   AND p.PaymentStatus = 'SUCCESS'
+                  AND b.BookingStatus = 'CONFIRMED'
 
                   AND (
                       ? IS NULL

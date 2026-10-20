@@ -54,6 +54,13 @@ public class AuthService {
         // Store hashed password instead of plain password
         request.setPassword(hashedPassword);
 
+        if (request.getGender() != null) {
+            String g = request.getGender().trim().toUpperCase();
+            if (g.startsWith("M")) request.setGender("M");
+            else if (g.startsWith("F")) request.setGender("F");
+            else request.setGender("O");
+        }
+
         Integer userId =
                 customerRepository.createCustomer(request);
 

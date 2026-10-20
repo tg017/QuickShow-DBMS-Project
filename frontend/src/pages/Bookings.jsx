@@ -161,7 +161,7 @@ export default function Bookings() {
 
                 <div style={{ textAlign: 'center', minWidth: '60px' }}>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>₹{b.totalAmount || 0}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{seats.split(',').length} seat(s)</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{b.totalSeatCount || (seats !== 'N/A' ? seats.split(',').length : 0)} seat(s)</div>
                 </div>
 
                 <div>

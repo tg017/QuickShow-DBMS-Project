@@ -44,7 +44,8 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/register",
                                 "/api/admin/login",
-                                "/api/admin/register"
+                                "/api/admin/register",
+                                "/error"
                         ).permitAll()
 
                         // Public browsing

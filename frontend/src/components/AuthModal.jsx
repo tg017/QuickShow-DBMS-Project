@@ -17,7 +17,7 @@ export default function AuthModal() {
     password: '',
     phoneNo: '',
     dob: '',
-    gender: 'MALE',
+    gender: 'M',
     houseNo: '',
     street: '',
     area: '',
@@ -170,9 +170,9 @@ export default function AuthModal() {
                   <label className="auth-modal__label">Gender *</label>
                   <select className="auth-modal__input" value={regData.gender}
                     onChange={(e) => setRegData({ ...regData, gender: e.target.value })}>
-                    <option value="MALE">Male</option>
-                    <option value="FEMALE">Female</option>
-                    <option value="OTHER">Other</option>
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                    <option value="O">Other</option>
                   </select>
                 </div>
               </div>

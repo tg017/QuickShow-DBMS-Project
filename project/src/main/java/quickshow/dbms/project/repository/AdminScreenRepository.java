@@ -295,6 +295,23 @@ public class AdminScreenRepository {
 
 
     // =========================================================
+    public int deleteSeats(
+            Integer screenId
+    ) {
+
+        String sql = """
+                DELETE FROM Seat
+                WHERE ScreenID = ?
+                """;
+
+        return jdbcTemplate.update(
+                sql,
+                screenId
+        );
+    }
+
+
+    // =========================================================
     // DELETE SCREEN
     // =========================================================
 

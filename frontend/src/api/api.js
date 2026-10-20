@@ -1,7 +1,11 @@
 const BASE = '/api';
 
-const getToken = () => {
+const getToken = (path = '') => {
   try {
+    if (path.startsWith('/admin')) {
+      const a = JSON.parse(sessionStorage.getItem('quickshow_admin') || 'null');
+      if (a?.token) return a.token;
+    }
     const u = JSON.parse(sessionStorage.getItem('quickshow_user') || 'null');
     if (u?.token) return u.token;
     const a = JSON.parse(sessionStorage.getItem('quickshow_admin') || 'null');
@@ -11,7 +15,7 @@ const getToken = () => {
 };
 
 async function apiFetch(path, options = {}) {
-  const token = getToken();
+  const token = getToken(path);
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -20,17 +24,23 @@ async function apiFetch(path, options = {}) {
 
   if (!res.ok) {
     let errorMsg = `Request failed with status ${res.status}`;
-    if (res.status === 401 || res.status === 403) {
+    if (path.includes('/login') && (res.status === 401 || res.status === 400)) {
+      errorMsg = 'Invalid email or password';
+    } else if (res.status === 401 || res.status === 403) {
       errorMsg = 'Your session has expired or you are not signed in. Please sign in to continue.';
-    } else if (contentType.includes('application/json')) {
+    }
+
+    if (contentType.includes('application/json')) {
       try {
         const err = await res.json();
-        errorMsg = err.message || err.error || errorMsg;
+        if (err.message || err.error) {
+          errorMsg = err.message || err.error;
+        }
       } catch {}
     } else {
       try {
         const text = await res.text();
-        if (text) errorMsg = text;
+        if (text && text.trim()) errorMsg = text;
       } catch {}
     }
     throw new Error(errorMsg);

@@ -48,7 +48,7 @@ public class AuthController {
 
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .build();
+                    .body(new LoginResponseDTO(null, null, null, null, null, e.getMessage()));
         }
     }
 

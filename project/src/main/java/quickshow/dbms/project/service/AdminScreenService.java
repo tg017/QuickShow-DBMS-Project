@@ -240,6 +240,7 @@ public class AdminScreenService {
     // DELETE SCREEN
     // =========================================================
 
+    @Transactional
     public String deleteScreen(
             Integer screenId
     ) {
@@ -260,12 +261,9 @@ public class AdminScreenService {
         }
 
 
-        if (adminScreenRepository.hasSeats(
+        adminScreenRepository.deleteSeats(
                 screenId
-        )) {
-
-            return "HAS_SEATS";
-        }
+        );
 
 
         int deleted =

@@ -48,9 +48,9 @@ export default function Confirmation({ bookingId }) {
 
   return (
     <div className="confirmation-view">
-      <div className="confirmation-view__icon">✓</div>
-      <h2 className="confirmation-view__title">Booking Confirmed!</h2>
-      <p className="confirmation-view__subtitle">Your e-ticket is ready</p>
+      <div className={`confirmation-view__icon ${status === 'CANCELLED' || status === 'FAILED' ? 'confirmation-view__icon--cancelled' : ''}`}>{status === 'CANCELLED' ? '✕' : status === 'FAILED' ? '!' : '✓'}</div>
+      <h2 className="confirmation-view__title">{status === 'CANCELLED' ? 'Booking Cancelled' : status === 'FAILED' ? 'Booking Failed' : 'Booking Confirmed!'}</h2>
+      <p className="confirmation-view__subtitle">{status === 'CANCELLED' ? 'This booking has been cancelled' : status === 'FAILED' ? 'This transaction could not be completed' : 'Your e-ticket is ready'}</p>
 
       <div className="confirmation-view__card">
         <div className="confirmation-view__booking-id">Booking ID: #BK-{bId}</div>
