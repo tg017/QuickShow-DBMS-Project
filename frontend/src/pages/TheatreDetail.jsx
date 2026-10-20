@@ -65,7 +65,7 @@ export default function TheatreDetail({ theatreId }) {
       </button>
       <section className="theatre-detail-page__header">
         <div className="theatre-detail-page__eyebrow">CINEMA HALL</div>
-        <h1>{theatre.name} <span>ID: {theatre.theatreId}</span></h1>
+        <h1>{theatre.name}</h1>
         <p>📍 {address}{theatre.pinCode ? ` - ${theatre.pinCode}` : ''}</p>
       </section>
 
@@ -106,7 +106,6 @@ export default function TheatreDetail({ theatreId }) {
                 <div className="theatre-show-card__meta">
                   <span>♟ Available Seats: <b>{show.availableSeats ?? 0}</b></span>
                   <span>▣ Price: <b>₹{show.ticketPrice ?? 0}</b></span>
-                  <span>Show ID: #{show.showId}</span>
                 </div>
               </div>
               <div className="theatre-show-card__time">

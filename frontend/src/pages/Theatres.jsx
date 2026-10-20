@@ -80,7 +80,7 @@ export default function Theatres() {
               <article key={theatreId} className="theatre-card theatre-card--directory">
                 <div className="theatre-card__topline">
                   <span className="theatre-card__pin">◉</span>
-                  <span className="theatre-card__id">ID: {theatreId}</span>
+                  {theatre.city && <span className="theatre-card__id">{theatre.city}</span>}
                 </div>
                 <h2 className="theatre-card__name">{theatre.name || 'Galaxy Cinema'}</h2>
                 <p className="theatre-card__location">{address(theatre) || 'Cinema hall'}</p>
