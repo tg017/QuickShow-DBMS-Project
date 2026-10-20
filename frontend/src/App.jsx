@@ -1,10 +1,10 @@
 import { AppProvider, useApp } from './context/AppContext';
 import Topbar from './components/Topbar';
-import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 
 import Home from './pages/Home';
+import Movies from './pages/Movies';
 import MovieDetail from './pages/MovieDetail';
 import SeatLayout from './pages/SeatLayout';
 import Checkout from './pages/Checkout';
@@ -12,22 +12,21 @@ import Confirmation from './pages/Confirmation';
 import Bookings from './pages/Bookings';
 import Profile from './pages/Profile';
 import Theatres from './pages/Theatres';
+import TheatreDetail from './pages/TheatreDetail';
 import Admin from './pages/Admin';
 
 function MainLayout() {
   const { currentRoute, toast } = useApp();
 
-  const hideSidebar = currentRoute.startsWith('admin') || 
-                      currentRoute.includes('/seats') || 
-                      currentRoute.startsWith('payment') || 
-                      currentRoute.includes('/confirmation');
-
   const renderRoute = () => {
 
-    if (currentRoute === '' || currentRoute === 'home' || currentRoute === 'movies') {
+    if (currentRoute === '' || currentRoute === 'home') {
       return <Home />;
     }
 
+    if (currentRoute === 'movies') {
+      return <Movies />;
+    }
     if (currentRoute.startsWith('movie/')) {
       const id = currentRoute.split('/')[1];
       return <MovieDetail movieId={id} />;
@@ -59,6 +58,10 @@ function MainLayout() {
       return <Theatres />;
     }
 
+    if (currentRoute.startsWith('theatre/')) {
+      return <TheatreDetail theatreId={currentRoute.split('/')[1]} />;
+    }
+
     if (currentRoute === 'admin') {
       return <Admin />;
     }
@@ -78,9 +81,7 @@ function MainLayout() {
     <>
       <Topbar />
 
-      <div className={`app-shell ${hideSidebar ? 'no-sidebar' : ''}`}>
-        {!hideSidebar && <Sidebar />}
-
+      <div className="app-shell no-sidebar">
         <main className="main-content">
           {renderRoute()}
         </main>
