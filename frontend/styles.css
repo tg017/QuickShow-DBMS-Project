@@ -421,7 +421,88 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .bookings-content { display: flex; flex-direction: column; gap: 32px; }
 .bookings-content__title { font-size: 24px; font-weight: 700; color: var(--text-primary); }
 .bookings-section__title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle); }
+/* MODERN DASHBOARD TABLES */
+.bookings-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 12px;
+}
 
+/* TABLE HEADER */
+.bookings-table thead th {
+  background: var(--bg-surface);
+  color: #A0AEC0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* TABLE BODY CELLS */
+.bookings-table tbody td {
+  padding: 14px 18px;
+  color: #E2E8F0;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+  white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ROW HOVER EFFECT */
+.bookings-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.bookings-table tbody tr:hover td {
+  background: var(--bg-card-hover);
+  color: #FFFFFF;
+}
+
+/* LAST ROW BORDER REMOVAL */
+.bookings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* TABLE ACTION BUTTONS */
+.bookings-table td button {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  transition: all 0.2s ease;
+  margin-right: 6px;
+}
+
+.bookings-table td .add-btn {
+  background: rgba(0, 229, 255, 0.15) !important;
+  color: #00E5FF !important;
+}
+
+.bookings-table td .add-btn:hover {
+  background: rgba(0, 229, 255, 0.25) !important;
+}
+
+.bookings-table td .cancel-btn {
+  background: rgba(248, 113, 113, 0.15) !important;
+  color: #F87171 !important;
+}
+
+.bookings-table td .cancel-btn:hover {
+  background: rgba(248, 113, 113, 0.25) !important;
+}
 /* DATA TABLE */
 .data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .data-table thead th {
