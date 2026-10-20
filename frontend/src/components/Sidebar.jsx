@@ -4,7 +4,7 @@ import { getMovies } from '../api/api';
 
 const CITIES = ['Varanasi', 'Bengaluru', 'Mumbai', 'Delhi-NCR', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata'];
 
-export default function Sidebar() {
+export default function Sidebar({ showFilters = false }) {
   const { selectedCity, changeCity, selectedDate, setSelectedDate, filters, setFilters, navigateTo } = useApp();
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [recMovies, setRecMovies] = useState([]);
@@ -58,51 +58,41 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="sidebar__filters">
-        <select 
-          className="sidebar__select" 
-          value={filters.language} 
-          onChange={(e) => setFilters({ ...filters, language: e.target.value })}
-        >
-          <option value="">By Language</option>
-          <option value="English">English</option>
-          <option value="Hindi">Hindi</option>
-          <option value="Telugu">Telugu</option>
-          <option value="Tamil">Tamil</option>
-          <option value="Kannada">Kannada</option>
-          <option value="Malayalam">Malayalam</option>
-        </select>
+      {showFilters && (
+        <div className="sidebar__filters">
+          <select className="sidebar__select" value={filters.language} onChange={(e) => setFilters({ ...filters, language: e.target.value })}>
+            <option value="">By Language</option>
+            <option value="English">English</option>
+            <option value="Hindi">Hindi</option>
+            <option value="Telugu">Telugu</option>
+            <option value="Tamil">Tamil</option>
+            <option value="Kannada">Kannada</option>
+            <option value="Malayalam">Malayalam</option>
+          </select>
 
-        <select 
-          className="sidebar__select" 
-          value={filters.genre} 
-          onChange={(e) => setFilters({ ...filters, genre: e.target.value })}
-        >
-          <option value="">By Genre</option>
-          <option value="Action">Action</option>
-          <option value="Sci-Fi">Sci-Fi</option>
-          <option value="Drama">Drama</option>
-          <option value="Comedy">Comedy</option>
-          <option value="Thriller">Thriller</option>
-          <option value="Adventure">Adventure</option>
-          <option value="Animation">Animation</option>
-          <option value="Horror">Horror</option>
-          <option value="Romance">Romance</option>
-        </select>
+          <select className="sidebar__select" value={filters.genre} onChange={(e) => setFilters({ ...filters, genre: e.target.value })}>
+            <option value="">By Genre</option>
+            <option value="Action">Action</option>
+            <option value="Sci-Fi">Sci-Fi</option>
+            <option value="Drama">Drama</option>
+            <option value="Comedy">Comedy</option>
+            <option value="Thriller">Thriller</option>
+            <option value="Adventure">Adventure</option>
+            <option value="Animation">Animation</option>
+            <option value="Horror">Horror</option>
+            <option value="Romance">Romance</option>
+          </select>
 
-        <select 
-          className="sidebar__select" 
-          value={filters.rating} 
-          onChange={(e) => setFilters({ ...filters, rating: e.target.value })}
-        >
-          <option value="">By Rating</option>
-          <option value="U">U – Universal</option>
-          <option value="UA_7_PLUS">UA 7+</option>
-          <option value="UA_13_PLUS">UA 13+</option>
-          <option value="UA_16_PLUS">UA 16+</option>
-          <option value="A">A – Adults Only</option>
-        </select>
-      </div>
+          <select className="sidebar__select" value={filters.rating} onChange={(e) => setFilters({ ...filters, rating: e.target.value })}>
+            <option value="">By Rating</option>
+            <option value="U">U – Universal</option>
+            <option value="UA_7_PLUS">UA 7+</option>
+            <option value="UA_13_PLUS">UA 13+</option>
+            <option value="UA_16_PLUS">UA 16+</option>
+            <option value="A">A – Adults Only</option>
+          </select>
+        </div>
+      )}
 
       <div className="sidebar__recommended">
         <h3 className="sidebar__rec-title">RECOMMENDED FOR YOU</h3>
