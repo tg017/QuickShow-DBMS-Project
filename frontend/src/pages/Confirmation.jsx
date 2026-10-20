@@ -81,14 +81,16 @@ export default function Confirmation({ bookingId }) {
         </div>
         <div className="confirmation-view__detail">
           <span>Status</span>
-          <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{status}</span>
+          <span style={{ color: status === 'CANCELLED' || status === 'FAILED' ? 'var(--danger)' : 'var(--primary)', fontWeight: 600 }}>{status}</span>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-        <button className="confirmation-view__download" onClick={() => window.print()}>
+        {status !== 'CANCELLED' && status !== 'FAILED' && (
+          <button className="confirmation-view__download" onClick={() => window.print()}>
           ⬇ Download Ticket
         </button>
+        )}
         <button className="add-btn" onClick={() => navigateTo('bookings')}>
           My Bookings
         </button>
