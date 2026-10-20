@@ -68,7 +68,7 @@ export default function AuthModal() {
           <button className="modal-close" onClick={() => setAuthModalOpen(false)} title="Close">×</button>
 
           <div className="auth-modal__header">
-            <div className="auth-modal__logo">🎬 QuickShow</div>
+            <div className="auth-modal__logo">QuickShow</div>
             <p className="auth-modal__subtitle">
               {authTab === 'login'
                 ? 'Sign in to access your bookings & profile'
@@ -111,10 +111,10 @@ export default function AuthModal() {
               </button>
 
               <div className="auth-modal__demo-hints">
-                <span className="auth-modal__demo-label">⚡ Quick Fill Demo:</span>
+                <span className="auth-modal__demo-label">Quick Fill Demo</span>
                 <div className="auth-modal__chips">
                   <button type="button" className="auth-chip" onClick={() => fillDemo('test.cse@gmail.com', 'Test@1234')}>
-                    👤 Test User (Test@1234)
+                    Test User (Test@1234)
                   </button>
                 </div>
               </div>
