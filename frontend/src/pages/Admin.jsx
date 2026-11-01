@@ -36,6 +36,7 @@ import {
   adminGetStatsBookings,
   adminGetTopMovies,
   adminGetTheatrePerformance,
+  getShowSeats,
 } from '../api/api';
 
 const formatScreenType = (st) => {
@@ -181,6 +182,9 @@ export default function Admin() {
     showStatus: 'SCHEDULED',
   });
   const [editingShow, setEditingShow] = useState(null);
+  const [showFilter, setShowFilter] = useState({ movieId: '', showDate: '' });
+  const [viewingShowLayout, setViewingShowLayout] = useState(null);
+  const [showLayoutLoading, setShowLayoutLoading] = useState(false);
 
   const [bookingFilter, setBookingFilter] = useState({ movie: '', theatre: '' });
   const [paymentFilter, setPaymentFilter] = useState({ theatre: '', paymentStatus: '' });
@@ -416,6 +420,9 @@ export default function Admin() {
       }
       if (bookingFilter.movie === deletedId) {
         setBookingFilter((prev) => ({ ...prev, movie: '' }));
+      }
+      if (showFilter.movieId === deletedId) {
+        setShowFilter((prev) => ({ ...prev, movieId: '' }));
       }
       let filter = statsFilter;
       if (statsFilter.movieId === deletedId) {
@@ -767,9 +774,25 @@ export default function Admin() {
     try {
       await adminDeleteShow(id);
       showToast('Show deleted', 'info');
+      if (viewingShowLayout && (viewingShowLayout.showId === id || viewingShowLayout.id === id)) {
+        setViewingShowLayout(null);
+      }
       loadAdminData();
     } catch (err) {
       showToast(err.message || 'Failed to delete show', 'error');
+    }
+  };
+
+  const handleViewShowSeats = async (show) => {
+    const sId = show.showId || show.id;
+    setShowLayoutLoading(true);
+    try {
+      const data = await getShowSeats(sId);
+      setViewingShowLayout(data);
+    } catch (err) {
+      showToast(err.message || 'Failed to load show seat layout', 'error');
+    } finally {
+      setShowLayoutLoading(false);
     }
   };
 
@@ -827,6 +850,19 @@ export default function Admin() {
       setSelectedPaymentDetail(payments.find((x) => x.paymentId === paymentId));
     }
   };
+
+  const filteredShows = shows.filter((s) => {
+    if (showFilter.movieId && String(s.movieId) !== String(showFilter.movieId)) {
+      return false;
+    }
+    if (showFilter.showDate) {
+      const sDate = s.showDate ? String(s.showDate).slice(0, 10) : '';
+      if (sDate !== showFilter.showDate) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   if (!admin) {
     return (
@@ -2188,7 +2224,187 @@ export default function Admin() {
                   </form>
                 )}
 
-                <h3 style={{ marginBottom: '12px' }}>Existing Shows</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 style={{ margin: 0 }}>Existing Shows</h3>
+                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Showing {filteredShows.length} of {shows.length} shows
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    background: 'var(--bg-secondary)',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle)',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                    alignItems: 'flex-end',
+                  }}
+                >
+                  <div style={{ minWidth: '180px', flex: 1 }}>
+                    <label className="auth-modal__label">Filter by Movie</label>
+                    <select
+                      className="sidebar__select"
+                      value={showFilter.movieId}
+                      onChange={(e) => setShowFilter({ ...showFilter, movieId: e.target.value })}
+                    >
+                      <option value="">All Movies</option>
+                      {movies.map((m) => (
+                        <option key={m.movieId} value={m.movieId}>{m.title}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ minWidth: '180px', flex: 1 }}>
+                    <label className="auth-modal__label">Filter by Date</label>
+                    <input
+                      type="date"
+                      className="auth-modal__input"
+                      value={showFilter.showDate}
+                      onChange={(e) => setShowFilter({ ...showFilter, showDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={() => setShowFilter({ movieId: '', showDate: '' })}
+                      disabled={!showFilter.movieId && !showFilter.showDate}
+                      style={{
+                        opacity: (!showFilter.movieId && !showFilter.showDate) ? 0.5 : 1,
+                        cursor: (!showFilter.movieId && !showFilter.showDate) ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                </div>
+
+                {viewingShowLayout && (() => {
+                  const showRowMap = new Map();
+                  if (viewingShowLayout.seats) {
+                    viewingShowLayout.seats.forEach((seat) => {
+                      if (!showRowMap.has(seat.rowNo)) showRowMap.set(seat.rowNo, []);
+                      showRowMap.get(seat.rowNo).push(seat);
+                    });
+                  }
+                  const sortedShowRows = Array.from(showRowMap.keys()).sort();
+                  const totalShowSeats = viewingShowLayout.seats?.length || 0;
+                  const bookedShowSeats = viewingShowLayout.seats?.filter((s) => s.status === 'BOOKED').length || 0;
+                  const availableShowSeats = viewingShowLayout.seats?.filter((s) => s.status === 'AVAILABLE').length || 0;
+
+                  return (
+                    <div
+                      style={{
+                        background: 'var(--bg-surface)',
+                        padding: '20px',
+                        borderRadius: '8px',
+                        border: '2px solid var(--accent)',
+                        marginBottom: '24px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <h3 style={{ fontSize: '16px', color: 'var(--accent)', margin: 0 }}>
+                              Show #{viewingShowLayout.showId} Seat Layout: {viewingShowLayout.movie?.title || 'Movie'}
+                            </h3>
+                            <span style={{ fontSize: '12px', background: 'rgba(0, 229, 255, 0.12)', color: 'var(--primary)', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                              {formatScreenType(viewingShowLayout.screen?.screenType)}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            {viewingShowLayout.theatre?.name} {viewingShowLayout.theatre?.city ? `(${viewingShowLayout.theatre?.city})` : ''} · {viewingShowLayout.screen?.name} · {viewingShowLayout.showDate} at {viewingShowLayout.showTime ? String(viewingShowLayout.showTime).slice(0, 5) : ''} · ₹{viewingShowLayout.ticketPrice}
+                          </div>
+                        </div>
+                        <button type="button" className="cancel-btn" onClick={() => setViewingShowLayout(null)}>
+                          ✕ Close
+                        </button>
+                      </div>
+
+                      {/* Stats and Legend */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', fontSize: '13px' }}>
+                          <div>
+                            <strong style={{ color: 'var(--text-primary)' }}>Total Capacity:</strong> {totalShowSeats}
+                          </div>
+                          <div>
+                            <strong style={{ color: '#10B981' }}>Available:</strong> {availableShowSeats}
+                          </div>
+                          <div>
+                            <strong style={{ color: '#EF4444' }}>Booked:</strong> {bookedShowSeats}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center', fontSize: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ width: '16px', height: '16px', borderRadius: '3px', border: '1px solid rgba(0, 229, 255, 0.35)', background: 'rgba(0, 229, 255, 0.08)' }}></div>
+                            <span style={{ color: 'var(--text-primary)' }}>Available</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ width: '16px', height: '16px', borderRadius: '3px', border: '1px solid #404040', background: '#262626', opacity: 0.5 }}></div>
+                            <span style={{ color: 'var(--text-muted)' }}>Booked (Greyed Out)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Screen Indicator & Grid */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowX: 'auto', padding: '20px 16px', background: 'var(--bg-deep)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '3px', borderBottom: '2px solid var(--border-subtle)', paddingBottom: '8px', marginBottom: '16px', width: '80%', margin: '0 auto 16px auto' }}>
+                          SCREEN THIS WAY
+                        </div>
+
+                        {sortedShowRows.map((rowKey) => {
+                          const rowSeats = showRowMap.get(rowKey).sort((a, b) => a.seatNo - b.seatNo);
+                          const rowBookedCount = rowSeats.filter((s) => s.status === 'BOOKED').length;
+                          return (
+                            <div key={rowKey} style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                              <span style={{ fontWeight: 700, width: '24px', textAlign: 'center', color: 'var(--accent)' }}>
+                                {rowKey}
+                              </span>
+                              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {rowSeats.map((seat) => {
+                                  const isBooked = seat.status === 'BOOKED';
+                                  return (
+                                    <div
+                                      key={seat.seatId}
+                                      title={`Seat ${seat.rowNo}${seat.seatNo} - ${seat.status}`}
+                                      style={{
+                                        width: '28px',
+                                        height: '26px',
+                                        fontSize: '11px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: '4px',
+                                        fontWeight: 600,
+                                        cursor: isBooked ? 'not-allowed' : 'default',
+                                        background: isBooked ? '#262626' : 'rgba(0, 229, 255, 0.08)',
+                                        border: isBooked ? '1px solid #404040' : '1px solid rgba(0, 229, 255, 0.35)',
+                                        color: isBooked ? '#666666' : 'var(--text-primary)',
+                                        opacity: isBooked ? 0.45 : 1,
+                                      }}
+                                    >
+                                      {seat.seatNo}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '85px', textAlign: 'right' }}>
+                                {rowBookedCount > 0 ? `(${rowBookedCount} booked)` : `(${rowSeats.length} avail)`}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <table className="bookings-table">
                   <thead>
                     <tr>
@@ -2198,24 +2414,48 @@ export default function Admin() {
                       <th>Time</th>
                       <th>Type</th>
                       <th>Price</th>
+                      <th>Availability</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {shows.map((s) => {
-                    const sid = s.showId || s.id;
-                    const screenObj = allScreens.find((sc) => sc.screenId === s.screenId);
-                    const movieObj = movies.find((m) => m.movieId === s.movieId);
-                    const screenType = screenObj?.screenType || s.screenType;
-                    return (
-                    <tr key={sid}>
-                    <td>#{sid}</td>
-      <td>{movieObj?.title || s.movieTitle || `Movie #${s.movieId}`}</td>
-      <td>{s.showDate || '-'}</td>
-      <td>{s.showTime ? String(s.showTime).slice(0, 5) : '-'}</td>
-      <td>{screenType ? formatScreenType(screenType) : '-'}</td>
+                    {filteredShows.map((s) => {
+                      const sid = s.showId || s.id;
+                      const screenObj = allScreens.find((sc) => sc.screenId === s.screenId);
+                      const movieObj = movies.find((m) => m.movieId === s.movieId);
+                      const screenType = screenObj?.screenType || s.screenType;
+                      return (
+                        <tr key={sid}>
+                          <td>#{sid}</td>
+                          <td>{movieObj?.title || s.movieTitle || `Movie #${s.movieId}`}</td>
+                          <td>{s.showDate || '-'}</td>
+                          <td>{s.showTime ? String(s.showTime).slice(0, 5) : '-'}</td>
+                          <td>{screenType ? formatScreenType(screenType) : '-'}</td>
                           <td>₹{s.ticketPrice || '-'}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="add-btn"
+                              style={{
+                                padding: '3px 8px',
+                                fontSize: '11px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: 'rgba(0, 229, 255, 0.1)',
+                                color: 'var(--primary)',
+                                border: '1px solid rgba(0, 229, 255, 0.3)',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                              onClick={() => handleViewShowSeats(s)}
+                              title="Click to view current seat layout"
+                            >
+                              <span>{s.availableSeats ?? '-'} Avail</span>
+                              <span style={{ fontSize: '10px' }}>👁 Layout</span>
+                            </button>
+                          </td>
                           <td>
                             <span className={`badge badge--${s.showStatus === 'CANCELLED' ? 'cancelled' : 'confirmed'}`}>
                               {s.showStatus || 'SCHEDULED'}
@@ -2234,9 +2474,11 @@ export default function Admin() {
                         </tr>
                       );
                     })}
-                    {shows.length === 0 && (
+                    {filteredShows.length === 0 && (
                       <tr>
-                        <td colSpan="8" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>No shows found.</td>
+                        <td colSpan="9" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                          {shows.length === 0 ? 'No shows found.' : 'No shows match the selected filters.'}
+                        </td>
                       </tr>
                     )}
                   </tbody>
